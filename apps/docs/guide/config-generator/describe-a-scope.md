@@ -214,7 +214,7 @@ const engine = createConfigEngine({
 });
 ```
 
-The generated types expose `…Base` and the main interface extends it; the
+The generated types expose `...Base` and the main interface extends it; the
 markdown and JSON Schema flatten the base fields into the top level.
 
 ### Hoist multiple groups
@@ -230,7 +230,7 @@ const engine = createConfigEngine({
 ```
 
 Both `base.port` and `server.host`, for example, become top-level fields in the
-generated `…Base` interface. Use `flatten: true` (or `flatten: { level }`) when
+generated `...Base` interface. Use `flatten: true` (or `flatten: { level }`) when
 you want all top-level keys flattened instead of selecting groups.
 
 ## Meta

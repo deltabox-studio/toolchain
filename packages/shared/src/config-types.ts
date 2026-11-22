@@ -1800,6 +1800,58 @@ export interface ToolchainProvidersConfig {
     regenerate?: boolean;
 }
 
+export interface ToolchainMcpConfig {
+    /**
+     * Install the official dbx skill into agent harnesses during `dbx sync`. Opt in by defining this
+     * section.
+     */
+    skills?: boolean | ToolchainMcpSkillsConfig;
+    /** Enable/disable this section (default: enabled when defined). */
+    enabled?: boolean;
+    /**
+     * Regenerate this section's managed files during `dbx sync`. When false, existing files are left
+     * untouched and are neither written nor drift-checked.
+     *
+     * @default true
+     */
+    regenerate?: boolean;
+}
+
+export interface ToolchainMcpSkillsConfig {
+    /** Agent harness(es) to install into (default: every builtin provider). `custom` requires `dir`. */
+    agents?:
+        | 'claude'
+        | 'codex'
+        | 'vscode'
+        | 'opencode'
+        | 'pi'
+        | 'custom'
+        | Array<'claude' | 'codex' | 'vscode' | 'opencode' | 'pi' | 'custom'>;
+    /**
+     * Write the skill into the project (default) or the user profile.
+     *
+     * @default 'project'
+     */
+    scope?: 'project' | 'global';
+    /** Custom directory to write the skill into (with `agents: ['custom']`). */
+    dir?: string;
+    /**
+     * Overwrite an existing skill file (default: keep it).
+     *
+     * @default false
+     */
+    force?: boolean;
+    /** Enable/disable this section (default: enabled when defined). */
+    enabled?: boolean;
+    /**
+     * Regenerate this section's managed files during `dbx sync`. When false, existing files are left
+     * untouched and are neither written nor drift-checked.
+     *
+     * @default true
+     */
+    regenerate?: boolean;
+}
+
 export interface ToolchainHooks {
     /** Runs after the config is loaded and its tokens are resolved. */
     afterLoad?: (info: {
@@ -1890,6 +1942,8 @@ export interface ToolchainConfigSections {
     logger?: boolean | ToolchainLoggerConfig;
     /** Provider command behaviour (eg. colour for the passthrough commands). */
     providers?: boolean | ToolchainProvidersConfig;
+    /** Install the official dbx skill (and MCP helpers) into AI agent harnesses. */
+    mcp?: boolean | ToolchainMcpConfig;
     /** Lifecycle hooks (functions; TS/JS configs only). Return values are awaited. */
     hooks?: ToolchainHooks;
 }

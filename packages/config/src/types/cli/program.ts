@@ -8,7 +8,11 @@ import type {
     CliOptionValues,
 } from '@deltabox/toolchain/shared';
 
-import type { ConfigProgramFormatOptions } from '../format.js';
+import type {
+    ConfigProgramFormatOptions,
+    ConfigProgramGroupsOptions,
+    ConfigProgramSortOrder,
+} from '../format.js';
 import type { ConfigScopeKeys, ConfigScopeOf } from '../resolved.js';
 import type { ConfigSchema } from '../schema.js';
 import type { GenerateConfigCliOptions } from './options.js';
@@ -45,6 +49,8 @@ export interface ConfigProgramCommand<
     description?: string;
     /** Command aliases. */
     aliases?: readonly string[];
+    /** Explicit help group; otherwise the name's path prefix groups it. */
+    group?: string;
     /** Command version (`<name> --version`). */
     version?: string;
     /** Hide the command from generated docs. */
@@ -759,6 +765,28 @@ export type ConfigProgramOptions<
      * @default `false`
      */
     disableColors?: ConfigProgramDisableColors<TContext, TGlobalOptions>;
+    /**
+     * Print the full help text after an invalid-argv error (unknown option or
+     * command, missing value). The error message is always thrown; the caller
+     * decides whether to render it with {@link ConfigProgram.formatError}.
+     * @default `false`
+     */
+    helpOnError?: boolean;
+    /**
+     * Group options and commands in help output. `true` (the default) derives
+     * command groups from delimited names (`vite:list` -> `vite`); `false`
+     * renders flat lists. An object can disable `auto` command grouping or
+     * change the delimiter(s).
+     * @default `true`
+     */
+    groups?: ConfigProgramGroupsOptions;
+    /**
+     * Sort commands by name within each help section, including command groups.
+     * `'asc'` (the default) sorts ascending, `'desc'` descending, and `false`
+     * keeps declaration/registration order.
+     * @default `'asc'`
+     */
+    sort?: ConfigProgramSortOrder;
     /** Write to a different stdout */
     writeOut?: (text: string) => void;
     /** Write to a different stderr */
@@ -780,6 +808,15 @@ export interface ConfigProgram<
     readonly commands: TCommands;
     /** The program-level global options (parsed for every command). */
     readonly globals: TGlobalOptions;
+    /**
+     * Whether the host should print the full help text after an invalid-argv
+     * error ({@link ConfigProgramOptions.helpOnError}).
+     */
+    readonly helpOnError: boolean;
+    /** The option/command grouping setting ({@link ConfigProgramOptions.groups}). */
+    readonly groups: ConfigProgramGroupsOptions;
+    /** The command sort order in help ({@link ConfigProgramOptions.sort}). */
+    readonly sort: ConfigProgramSortOrder;
     /** Set the program name shown in help. */
     name(value: string): this;
     /** Set the program description shown in help. */

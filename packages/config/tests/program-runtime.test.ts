@@ -536,6 +536,52 @@ describe('program invocation', () => {
         expect(seen[1]).toMatchObject({ color: false });
     });
 
+    it('parses hyphenated long options into camel-cased values', async () => {
+        // Regression: `parseArgs` options were keyed by the camel-cased name
+        // (`dryRun`), so `--dry-run` / `--release-body` were rejected as
+        // unknown options by the selected command.
+        const seen: Record<string, unknown>[] = [];
+        const program = createConfigProgram([
+            {
+                name: 'changelog',
+                description: 'Changelog.',
+                options: [
+                    { flags: '--dry-run', description: 'Dry run.' },
+                    { flags: '--release-body <semver>', description: 'Release body.' },
+                    {
+                        flags: '--release-include-prereleases',
+                        description: 'Include prereleases.',
+                    },
+                    { flags: '--no-release-group', description: 'No release group.' },
+                    { flags: '--intro-file <file>', description: 'Intro file.' },
+                    { flags: '--tag <value...>', description: 'Tags.' },
+                ],
+                run: (values: Record<string, unknown>) => void seen.push(values),
+            },
+        ]);
+        await program.invokeAsync([
+            'changelog',
+            '--dry-run',
+            '--release-body',
+            '3.0.0-beta.18',
+            '--release-include-prereleases',
+            '--intro-file',
+            'intro.md',
+            '--tag',
+            'a',
+            'b',
+        ]);
+        expect(seen[0]).toEqual({
+            dryRun: true,
+            releaseBody: '3.0.0-beta.18',
+            releaseIncludePrereleases: true,
+            introFile: 'intro.md',
+            tag: ['a', 'b'],
+        });
+        await program.invokeAsync(['changelog', '--no-release-group']);
+        expect(seen[1]).toMatchObject({ releaseGroup: false });
+    });
+
     it('rejects invalid number/boolean option values', () => {
         const program = createConfigProgram([
             {
@@ -668,6 +714,305 @@ describe('program help and errors', () => {
         expect(help).not.toContain('[myapp]');
     });
 
+    it('groups options under their own help headings', () => {
+        const program = createConfigProgram(
+            [
+                {
+                    name: 'serve',
+                    description: 'Serve.',
+                    options: [
+                        { flags: '--port <value>', description: 'Port.' },
+                        { flags: '--trace', description: 'Trace.', group: 'diagnostics' },
+                        { flags: '--profile', description: 'Profile.', group: 'Diagnostics' },
+                        { flags: '--out <dir>', description: 'Out.' },
+                        { flags: '--json', description: 'JSON.', group: 'Output' },
+                    ],
+                    run: () => {},
+                },
+            ],
+            {
+                globalOptions: [
+                    { flags: '--cwd <dir>', description: 'Root.' },
+                    { flags: '--verbose', description: 'Verbose.', group: 'diagnostics' },
+                ] as const,
+            }
+        );
+
+        const help = program.formatHelp('serve');
+        const optionsIndex = help.indexOf('Options:');
+        const diagnosticsIndex = help.indexOf('Diagnostics options:');
+        const outputIndex = help.indexOf('Output options:');
+        expect(optionsIndex).toBeGreaterThan(-1);
+        expect(diagnosticsIndex).toBeGreaterThan(optionsIndex);
+        expect(outputIndex).toBeGreaterThan(diagnosticsIndex);
+
+        const defaults = help.slice(optionsIndex, diagnosticsIndex);
+        expect(defaults).toContain('--cwd');
+        expect(defaults).toContain('--port');
+        expect(defaults).not.toContain('--trace');
+
+        const diagnostics = help.slice(diagnosticsIndex, outputIndex);
+        // Group labels merge case-insensitively into one section.
+        expect(diagnostics.match(/Diagnostics options:/g)).toHaveLength(1);
+        expect(diagnostics).toContain('--trace');
+        expect(diagnostics).toContain('--profile');
+        expect(diagnostics).toContain('--verbose');
+
+        expect(help.slice(outputIndex)).toContain('--json');
+        // Program help groups its globals through the same renderer.
+        expect(program.formatHelp()).toContain('Diagnostics options:');
+
+        // `groups: false` flattens option groups too.
+        const flat = createConfigProgram(
+            [
+                {
+                    name: 'serve',
+                    description: 'Serve.',
+                    options: [{ flags: '--trace', description: 'Trace.', group: 'Diagnostics' }],
+                    run: () => {},
+                },
+            ],
+            { groups: false }
+        );
+        const flatHelp = flat.formatHelp('serve');
+        expect(flatHelp).not.toContain('Diagnostics options:');
+        expect(flatHelp.slice(flatHelp.indexOf('Options:'))).toContain('--trace');
+    });
+
+    it('groups commands by their delimited name path by default', () => {
+        const program = createConfigProgram([
+            { name: 'sync', description: 'Sync.', run: () => {} },
+            { name: 'vite:list', description: 'List Vite+ commands.', run: () => {} },
+            { name: 'vite:build', description: 'Build.', run: () => {} },
+            { name: 'cleanup:turbo', description: 'Clear turbo.', run: () => {} },
+        ]);
+        expect(program.groups).toBe(true);
+
+        const help = program.formatHelp();
+        const commands = help.indexOf('Commands:');
+        const vite = help.indexOf('Vite commands:');
+        const cleanup = help.indexOf('Cleanup commands:');
+        expect(commands).toBeGreaterThan(-1);
+        expect(vite).toBeGreaterThan(commands);
+        expect(cleanup).toBeGreaterThan(vite);
+
+        expect(help.slice(commands, vite)).toContain('sync');
+        expect(help.slice(commands, vite)).not.toContain('vite:list');
+        expect(help.slice(vite, cleanup)).toContain('vite:list');
+        expect(help.slice(vite, cleanup)).toContain('vite:build');
+        expect(help.slice(cleanup)).toContain('cleanup:turbo');
+    });
+
+    it('can disable command grouping or only group explicit groups', () => {
+        const commands = [
+            { name: 'sync', description: 'Sync.', run: () => {} },
+            { name: 'vite:list', description: 'List.', run: () => {} },
+            { name: 'serve:status', description: 'Status.', group: 'Server', run: () => {} },
+        ];
+
+        const flat = createConfigProgram(commands, { groups: false });
+        expect(flat.groups).toBe(false);
+        const flatHelp = flat.formatHelp();
+        expect(flatHelp).toContain('Commands:');
+        expect(flatHelp).not.toContain('Vite commands:');
+        expect(flatHelp).not.toContain('Server commands:');
+
+        const explicit = createConfigProgram(commands, { groups: { auto: false } });
+        const explicitHelp = explicit.formatHelp();
+        expect(explicitHelp).toContain('Server commands:');
+        expect(explicitHelp).not.toContain('Vite commands:');
+        expect(explicitHelp.slice(explicitHelp.indexOf('Commands:'))).toContain('vite:list');
+
+        const engineProgram = engine().cli.program.create(
+            cmd => [
+                cmd('custom', {
+                    name: 'custom',
+                    group: 'Extras',
+                    description: 'Custom.',
+                    run: () => {},
+                }),
+            ],
+            { groups: { auto: false } }
+        );
+        expect(engineProgram.formatHelp()).toContain('Extras commands:');
+    });
+
+    it('supports custom and multiple grouping delimiters', () => {
+        const program = createConfigProgram(
+            [
+                { name: 'vite/list', description: 'List.', run: () => {} },
+                { name: 'vite/build', description: 'Build.', run: () => {} },
+                { name: 'db/tools', description: 'Tools.', run: () => {} },
+                { name: 'vite:dev', description: 'Dev.', run: () => {} },
+            ],
+            { groups: { delimiter: ['/', ':'] } }
+        );
+        const help = program.formatHelp();
+        const vite = help.indexOf('Vite commands:');
+        expect(vite).toBeGreaterThan(-1);
+        expect(help.match(/Vite commands:/g)).toHaveLength(1);
+        expect(help.slice(vite)).toContain('vite/list');
+        expect(help.slice(vite)).toContain('vite:dev');
+        expect(help).toContain('Db commands:');
+        expect(help).toContain('db/tools');
+
+        const slashes = createConfigProgram(
+            [
+                { name: 'vite/list', description: 'List.', run: () => {} },
+                { name: 'vite:dev', description: 'Dev.', run: () => {} },
+            ],
+            { groups: { delimiter: '/' } }
+        );
+        const slashHelp = slashes.formatHelp();
+        expect(slashHelp).toContain('Vite commands:');
+        expect(
+            slashHelp.slice(slashHelp.indexOf('Commands:'), slashHelp.indexOf('Vite commands:'))
+        ).toContain('vite:dev');
+    });
+
+    it('disables explicit option and command groups when groups is false', () => {
+        const commands = [
+            {
+                name: 'serve',
+                description: 'Serve.',
+                group: 'Server',
+                options: [
+                    { flags: '--port <value>', description: 'Port.' },
+                    { flags: '--trace', description: 'Trace.', group: 'Diagnostics' },
+                ],
+                run: () => {},
+            },
+        ];
+
+        const flat = createConfigProgram(commands, {
+            groups: false,
+            globalOptions: [{ flags: '--verbose', description: 'Verbose.', group: 'Diagnostics' }],
+        });
+        const commandHelp = flat.formatHelp('serve');
+        expect(commandHelp).toContain('Options:');
+        expect(commandHelp).not.toContain('Diagnostics options:');
+        expect(commandHelp.slice(commandHelp.indexOf('Options:'))).toContain('--trace');
+        expect(commandHelp.slice(commandHelp.indexOf('Options:'))).toContain('--verbose');
+
+        const programHelp = flat.formatHelp();
+        expect(programHelp).toContain('Commands:');
+        expect(programHelp).not.toContain('Server commands:');
+        expect(programHelp.slice(programHelp.indexOf('Commands:'))).toContain('serve');
+
+        // `auto: false` only disables derived groups; explicit labels still work.
+        const explicit = createConfigProgram(commands, { groups: { auto: false } });
+        expect(explicit.formatHelp()).toContain('Server commands:');
+        const explicitCommand = explicit.formatHelp('serve');
+        expect(explicitCommand).toContain('Diagnostics options:');
+        expect(explicitCommand.slice(explicitCommand.indexOf('Diagnostics options:'))).toContain(
+            '--trace'
+        );
+    });
+
+    it('handles delimiter and heading edge cases', () => {
+        const emptyDelimiters = createConfigProgram(
+            [
+                { name: 'vite:list', description: 'List.', run: () => {} },
+                { name: 'serve:status', description: 'Status.', group: 'Server', run: () => {} },
+            ],
+            { groups: { delimiter: [] } }
+        );
+        const emptyHelp = emptyDelimiters.formatHelp();
+        expect(emptyHelp).not.toContain('Vite commands:');
+        expect(emptyHelp).toContain('Server commands:');
+        expect(emptyHelp.slice(emptyHelp.indexOf('Commands:'))).toContain('vite:list');
+
+        const leading = createConfigProgram([
+            { name: ':leading', description: 'Leading.', run: () => {} },
+        ]);
+        expect(leading.formatHelp()).not.toContain(' commands:');
+
+        const suffixed = createConfigProgram(
+            [
+                {
+                    name: 'sync',
+                    description: 'Sync.',
+                    group: 'Custom commands',
+                    options: [
+                        { flags: '--trace', description: 'Trace.', group: 'Advanced options' },
+                    ],
+                    run: () => {},
+                },
+            ],
+            { groups: { auto: false } }
+        );
+        const suffixedProgram = suffixed.formatHelp();
+        const suffixedCommand = suffixed.formatHelp('sync');
+        expect(suffixedProgram).toContain('Custom commands:');
+        expect(suffixedProgram).not.toContain('Custom commands commands:');
+        expect(suffixedCommand).toContain('Advanced options:');
+        expect(suffixedCommand).not.toContain('Advanced options options:');
+    });
+
+    it('groups subcommand help and strips the groups setting on demand', () => {
+        const build = (groups?: boolean) =>
+            createConfigProgram(
+                [
+                    {
+                        name: 'template',
+                        description: 'Templates.',
+                        commands: [
+                            { name: 'list', description: 'List.', group: 'Listing', run: () => {} },
+                            { name: 'info', description: 'Info.', run: () => {} },
+                        ],
+                        run: () => {},
+                    },
+                ],
+                groups === undefined ? {} : { groups }
+            );
+
+        const grouped = build().formatHelp('template');
+        expect(grouped).toContain('Listing commands:');
+        expect(grouped.slice(grouped.indexOf('Listing commands:'))).toContain('list');
+        expect(grouped.slice(0, grouped.indexOf('Listing commands:'))).toContain('info');
+
+        const flat = build(false).formatHelp('template');
+        expect(flat).not.toContain('Listing commands:');
+        expect(flat.slice(flat.indexOf('Commands:'))).toContain('list');
+        expect(flat.slice(flat.indexOf('Commands:'))).toContain('info');
+    });
+
+    it('sorts commands ascending by default and supports opt-out or descending', () => {
+        const commands = [
+            { name: 'zeta', description: 'Z.', run: () => {} },
+            { name: 'alpha', description: 'A.', group: 'Group', run: () => {} },
+            { name: 'beta', description: 'B.', group: 'Group', run: () => {} },
+            { name: 'gamma', description: 'G.', run: () => {} },
+        ];
+
+        const asc = createConfigProgram(commands);
+        expect(asc.sort).toBe('asc');
+        const ascHelp = asc.formatHelp();
+        const ascDefault = ascHelp.indexOf('Commands:');
+        const ascGroup = ascHelp.indexOf('Group commands:');
+        expect(ascDefault).toBeGreaterThan(-1);
+        expect(ascGroup).toBeGreaterThan(ascDefault);
+        expect(ascHelp.slice(ascDefault, ascGroup)).toMatch(/gamma[\s\S]*zeta/);
+        expect(ascHelp.slice(ascGroup)).toMatch(/alpha[\s\S]*beta/);
+
+        const desc = createConfigProgram(commands, { sort: 'desc' });
+        expect(desc.sort).toBe('desc');
+        const descHelp = desc.formatHelp();
+        const descDefault = descHelp.indexOf('Commands:');
+        const descGroup = descHelp.indexOf('Group commands:');
+        expect(descHelp.slice(descDefault, descGroup)).toMatch(/zeta[\s\S]*gamma/);
+        expect(descHelp.slice(descGroup)).toMatch(/beta[\s\S]*alpha/);
+
+        const off = createConfigProgram(commands, { sort: false });
+        expect(off.sort).toBe(false);
+        const offHelp = off.formatHelp();
+        const offDefault = offHelp.indexOf('Commands:');
+        const offGroup = offHelp.indexOf('Group commands:');
+        // Declaration order: zeta, gamma; group: alpha, beta.
+        expect(offHelp.slice(offDefault, offGroup)).toMatch(/zeta[\s\S]*gamma/);
+        expect(offHelp.slice(offGroup)).toMatch(/alpha[\s\S]*beta/);
+    });
+
     it('renders colourless boxed help and plain/custom variants', () => {
         const program = engine().cli.program.create(cmd => [
             cmd('serve', {
@@ -778,6 +1123,21 @@ describe('program help and errors', () => {
         await asyncProgram.invokeAsync(['serve', '--help', '--no-color']);
         expect(output.join('')).not.toContain('[serve]');
         expect(() => asyncProgram.invoke(['serve', '--help', '--no-color'])).toThrow(/invokeAsync/);
+    });
+
+    it('exposes helpOnError as an opt-in program option', () => {
+        const quiet = createConfigProgram([{ name: 'serve', run: () => {} }]);
+        expect(quiet.helpOnError).toBe(false);
+
+        const noisy = createConfigProgram([{ name: 'serve', run: () => {} }], {
+            helpOnError: true,
+        });
+        expect(noisy.helpOnError).toBe(true);
+
+        const engineProgram = engine().cli.program.create(cmd => [cmd('serve').run(() => {})], {
+            helpOnError: true,
+        });
+        expect(engineProgram.helpOnError).toBe(true);
     });
 
     it('passes parsed globals and the context to disableColors', async () => {

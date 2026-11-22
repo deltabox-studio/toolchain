@@ -14,7 +14,12 @@ import { fileURLToPath } from 'node:url';
 import pc from 'picocolors';
 
 import { changelogCommands } from '@deltabox/toolchain/changelog/cli';
-import { createConfigProgram, ConfigProgramError } from '@deltabox/toolchain/config';
+import {
+    createConfigProgram,
+    ConfigProgramError,
+    type ConfigProgramGroupsOptions,
+    type ConfigProgramSortOrder,
+} from '@deltabox/toolchain/config';
 import { loadToolchainConfig } from '@deltabox/toolchain/core';
 import { mcpCommands } from '@deltabox/toolchain/mcp/cli';
 import { migrateCommands } from '@deltabox/toolchain/migrate/cli';
@@ -41,6 +46,7 @@ import type { ConfigProgram, ResolveConfigProgramCommands } from '../config.js';
 import type { CliCommandContext, CliOption } from '../shared.js';
 import { syncCommands } from './commands/index.js';
 import { extractConfigSelection, setConfigSelection } from './config-selection.js';
+import { withDogfoodGroups } from './groups.js';
 import { setPassthroughCommand, withCliContext } from './register.js';
 import { withToolingRouting } from './tooling-commands.js';
 import { runUpdateCheck } from './update-check.js';
@@ -77,18 +83,21 @@ function toolingAliases(commands: CliCommand[]) {
  */
 export function builtinCommands(config?: ToolchainConfig) {
     const vite = withToolingRouting(viteCommands());
-    return [
+    // Registration order drives the first-appearance group order in help, so
+    // keep it aligned with the docs sidebar: project/templates, tooling,
+    // automation, agents, then the Vite+ passthroughs.
+    return withDogfoodGroups([
         ...syncCommands(config),
-        ...tsconfigCommands(),
-        ...cleanupCommands(),
-        ...changelogCommands(),
-        ...mcpCommands(),
-        ...migrateCommands(),
         ...projectCommands(),
         ...templateCommands(),
-        ...vite,
+        ...tsconfigCommands(),
+        ...cleanupCommands(),
+        ...migrateCommands(),
         ...toolingAliases(vite),
-    ];
+        ...changelogCommands(),
+        ...mcpCommands(),
+        ...vite,
+    ]);
 }
 
 /** Every built-in command name (a bare Vite+ command never shadows one). */
@@ -243,15 +252,39 @@ const globalOptions = [
     { flags: '-V, --version', description: 'Output the version number.' },
 ] as const;
 
+/** Runtime behavior toggles for the root `dbx` program. */
+export interface RootCliOptions {
+    /**
+     * Print the full program help after invalid argv (unknown option/command,
+     * missing or bad value). Off by default: only the error message is shown.
+     * @default `false`
+     */
+    helpOnError?: boolean;
+    /**
+     * Group options and commands in help by their delimited name path
+     * (`vite:list` -> `Vite commands:`). `true` (default) enables auto grouping;
+     * `false` renders flat lists; an object can disable `auto` or change the
+     * delimiter(s).
+     * @default `true`
+     */
+    groups?: ConfigProgramGroupsOptions;
+    /**
+     * Sort commands by name within each help section, including groups.
+     * `'asc'` (default), `'desc'`, or `false` to keep registration order.
+     * @default `'asc'`
+     */
+    sort?: ConfigProgramSortOrder;
+}
+
 /**
  * Build the `dbx` program on the config engine runtime.
  *
  * Help/version output is routed through the shared logger so it honours the
  * same colour settings and sink as everything else.
  */
-export function createCli<
-    TContext extends CliCommandContext = ToolchainCommandContext,
->(): ConfigProgram<
+export function createCli<TContext extends CliCommandContext = ToolchainCommandContext>(
+    options?: RootCliOptions
+): ConfigProgram<
     ResolveConfigProgramCommands<ReturnType<typeof builtinCommands>, TContext>,
     TContext,
     typeof globalOptions
@@ -264,7 +297,8 @@ export function createCli<
     const TName extends string = string,
     const TGlobalOptions extends readonly CliOption[] = readonly CliOption[],
 >(
-    commands: readonly CliCommand<TOptions, TContext, TCommands, TScope, TName, TGlobalOptions>[]
+    commands: readonly CliCommand<TOptions, TContext, TCommands, TScope, TName, TGlobalOptions>[],
+    options?: RootCliOptions
 ): ConfigProgram<
     ResolveConfigProgramCommands<
         readonly CliCommand<TOptions, TContext, TCommands, TScope, TName, TGlobalOptions>[],
@@ -277,7 +311,8 @@ export function createCli<
     const Commands extends readonly CliCommand<any, any>[],
     TContext extends CliCommandContext = ToolchainCommandContext,
 >(
-    commands: Commands
+    commands: Commands,
+    options?: RootCliOptions
 ): ConfigProgram<ResolveConfigProgramCommands<Commands, TContext>, TContext, typeof globalOptions>;
 export function createCli<
     const TOptions extends readonly CliOption[] = readonly CliOption[],
@@ -286,8 +321,26 @@ export function createCli<
     const TScope extends string | undefined = string | undefined,
     const TName extends string = string,
     const TGlobalOptions extends readonly CliOption[] = readonly CliOption[],
->(commands?: readonly CliCommand<TOptions, TContext, TCommands, TScope, TName, TGlobalOptions>[]) {
-    return createConfigProgram(withCliContext(commands ?? (builtinCommands() as any)), {
+>(
+    commands?:
+        | readonly CliCommand<TOptions, TContext, TCommands, TScope, TName, TGlobalOptions>[]
+        | RootCliOptions,
+    options: RootCliOptions = {}
+) {
+    const commandList = Array.isArray(commands)
+        ? (commands as readonly CliCommand<
+              TOptions,
+              TContext,
+              TCommands,
+              TScope,
+              TName,
+              TGlobalOptions
+          >[])
+        : undefined;
+    const programOptions: RootCliOptions = Array.isArray(commands)
+        ? options
+        : ((commands as RootCliOptions | undefined) ?? options);
+    return createConfigProgram(withCliContext(commandList ?? (builtinCommands() as any)), {
         name: 'dbx',
         description: rootPkg.description,
         version: rootPkg.version,
@@ -295,6 +348,9 @@ export function createCli<
         disableColors: ({ color }) => {
             return getLogOverrides().color === false || color === false;
         },
+        helpOnError: programOptions.helpOnError === true,
+        ...(programOptions.groups !== undefined ? { groups: programOptions.groups } : {}),
+        ...(programOptions.sort !== undefined ? { sort: programOptions.sort } : {}),
         writeOut: text => logger.write('out', text),
         writeErr: text => logger.write('err', text),
     }).configure({
@@ -339,7 +395,10 @@ function installInterruptHandler(): void {
 }
 
 /** Parse and run the CLI. */
-export async function runCli(argv: string[] = process.argv): Promise<void> {
+export async function runCli(
+    argv: string[] = process.argv,
+    programOptions: RootCliOptions = {}
+): Promise<void> {
     installInterruptHandler();
     // A preliminary command set is enough to classify passthrough operands
     // before the config selection is known; the final set is filtered by the
@@ -397,13 +456,14 @@ export async function runCli(argv: string[] = process.argv): Promise<void> {
                 (!commandNames.has(first) && resolveVpCommand(first) !== undefined))
         )
     );
-    const program = createCli(commands);
+    const program = createCli(commands, programOptions);
     try {
         await program.invokeAsync(userArgv);
     } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         logger.error(message);
-        if (error instanceof ConfigProgramError) {
+        // Opt-in only: `helpOnError` keeps short, scriptable failures by default.
+        if (error instanceof ConfigProgramError && program.helpOnError) {
             logger.write('err', `${program.formatHelp()}\n`);
         }
         process.exitCode = 1;

@@ -187,8 +187,8 @@ import {
 
 | Export                                 | Description                                                            |
 | -------------------------------------- | ---------------------------------------------------------------------- |
-| `createCli(commands?)`                 | Build the `dbx` engine program (global flags + built-in commands).     |
-| `runCli(argv?)`                        | Parse and run the CLI (extracts logger flags, then defaults Vite+).    |
+| `createCli(commands?, options?)`       | Build the `dbx` engine program (global flags + built-in commands).     |
+| `runCli(argv?, options?)`              | Parse and run the CLI (extracts logger flags, then defaults Vite+).    |
 | `builtinCommands()`                    | The commands built into the root CLI (config commands need an engine). |
 | `withCliContext(commands)`             | Wrap commands with dbx config loading, logging and framing.            |
 | `withDefaultVite(argv, commandNames?)` | Insert `vite` before a bare Vite+ command (built-ins win).             |
@@ -198,6 +198,22 @@ import {
 `createCli(commands)` accepts a typed command array (for example from
 `defineCliCommand`) and keeps the command/option types on `program.commands`;
 `createCli()` uses `builtinCommands()`.
+
+Invalid argv prints only the error message by default. Pass
+`{ helpOnError: true }` to `createCli({ helpOnError: true })`,
+`createCli(commands, { helpOnError: true })` or
+`runCli(argv, { helpOnError: true })` to also print the full help after an
+unknown option/command or a bad value.
+
+`dbx` groups options and commands by default: `vite:list` is listed under a
+`Vite+ commands:` heading. The built-in commands mirror the docs sidebar:
+core workspace commands stay under `Commands:`, followed by
+`Project & templates`, `Tooling`, `Automation & API`, `Agents` and `Vite+`.
+Commands are sorted ascending by name within each section by default; pass
+`{ sort: 'desc' }` to reverse that or `{ sort: false }` to keep registration
+order (in groups too). Pass `{ groups: false }` for flat lists, or
+`{ groups: { auto: false } }` to only honor explicit command groups. The same
+options work through `createCli` and `runCli`.
 
 `extractLogOptions` makes the logger flags work before _or_ after the
 subcommand and stops at `--`, so a wrapped binary's own flags are never eaten.

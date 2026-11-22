@@ -6,6 +6,7 @@ export * from './templates.js';
 export { parseArgsCli } from './utils/args.js';
 export { isBreakingCommit } from './utils/breaking.js';
 export {
+    escapeMarkdownHtml,
     formatBody,
     formatLine,
     groupItems,

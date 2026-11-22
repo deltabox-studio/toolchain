@@ -132,8 +132,8 @@ sync task (see the [Providers](/guide/providers) guide).
 | Export                                 | Description                                                                |
 | -------------------------------------- | -------------------------------------------------------------------------- |
 | `builtinCommands()`                    | The commands built into the root CLI (config commands need an engine).     |
-| `createCli(commands?)`                 | Build the `dbx` program; pre-typed arrays keep their command/option types. |
-| `runCli(argv?)`                        | Parse and run the CLI (extracts logger flags, defaults bare Vite+).        |
+| `createCli(commands?, options?)`       | Build the `dbx` program; pre-typed arrays keep their command/option types. |
+| `runCli(argv?, options?)`              | Parse and run the CLI (extracts logger flags, defaults bare Vite+).        |
 | `withDefaultVite(argv, commandNames?)` | Insert `vite` before a bare Vite+ command.                                 |
 | `extractLogOptions(argv)`              | Pull `--log-level` / `--color` / `--no-color` out of argv.                 |
 

@@ -221,6 +221,7 @@ export function generateConfigProgram<
             ...(scope ? { scope: scope.name } : {}),
             description,
             ...(aliases && aliases.length > 0 ? { aliases: [...aliases] } : {}),
+            ...(spec.group ? { group: spec.group } : {}),
             ...(args && args.length > 0 ? { args: [...args] } : {}),
             ...(spec.version ? { version: spec.version } : {}),
             ...(spec.argv ? { argv: [...spec.argv] } : {}),

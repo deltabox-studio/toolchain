@@ -419,20 +419,10 @@ Generated from the same `CliCommand` descriptors the `dbx` binary registers.
 | [`dbx enabled`](#enabled)                               | Print whether the toolchain is enabled for this project (and the scope).                        |
 | [`dbx enable`](#enable)                                 | Enable the toolchain (workspace scope by default).                                              |
 | [`dbx disable`](#disable)                               | Disable the toolchain (workspace scope by default).                                             |
-| [`dbx tsconfig`](#tsconfig)                             | Generate workspace tsconfig.json files from the default tsconfig (aliases + references).        |
-| [`dbx cleanup`](#cleanup)                               | Remove build artifacts (*.tsbuildinfo, dist/).                                                  |
-| [`dbx cleanup:turbo`](#cleanup-turbo)                   | Remove the turbo cache (.turbo/).                                                               |
-| [`dbx workflow`](#workflow)                             | Trigger generated workflows with their vendor CLI (`gh`, `glab` or `az`).                       |
-| [`dbx changelog`](#changelog)                           | Scan commits, derive the semver bump and update the CHANGELOG.md files + versions.              |
-| [`dbx mcp:serve`](#mcp-serve)                           | Run the dbx MCP server over stdio (for MCP clients).                                            |
-| [`dbx mcp:install`](#mcp-install)                       | Install the dbx MCP server + skill into an AI harness/editor.                                   |
-| [`dbx mcp:list`](#mcp-list)                             | List the builtin MCP providers (Claude, Codex, VS Code, OpenCode, Pi).                          |
-| [`dbx migrate`](#migrate)                               | Migrate Biome / ESLint / Prettier / Dprint / Oxc config, or fold vite.config.\* into dbx.config. |
-| [`dbx migrate:list`](#migrate-list)                     | List the registered migrations and whether each is detected.                                    |
 | [`dbx project:init`](#project-init)                     | Scaffold a single-package TypeScript project.                                                   |
 | [`dbx project:init:monorepo`](#project-init-monorepo)   | Scaffold a monorepo root (add --example for one example workspace).                             |
 | [`dbx project:init:workspace`](#project-init-workspace) | Scaffold a monorepo workspace package into an existing monorepo root.                           |
-| [`dbx project:config`](#project-config)                 | Generate dbx.config.\* for existing projects that are missing one.                               |
+| [`dbx project:config`](#project-config)                 | Generate dbx.config.* for existing projects that are missing one.                               |
 | [`dbx template:list`](#template-list)                   | List templates (builtin + local + opted-in online sources).                                     |
 | [`dbx template:init`](#template-init)                   | Write a template.json to a directory, making it a local template.                               |
 | [`dbx template:add`](#template-add)                     | Record a template source in .dbx/toolchain/templates.json.                                      |
@@ -441,6 +431,19 @@ Generated from the same `CliCommand` descriptors the `dbx` binary registers.
 | [`dbx registry`](#registry)                             | List or manage the template/provider registries.                                                |
 | [`dbx template:info`](#template-info)                   | Show one template by id.                                                                        |
 | [`dbx create`](#create)                                 | Scaffold a project from a template (builtin, local or Vite+).                                   |
+| [`dbx tsconfig`](#tsconfig)                             | Generate workspace tsconfig.json files from the default tsconfig (aliases + references).        |
+| [`dbx cleanup`](#cleanup)                               | Remove build artifacts (*.tsbuildinfo, dist/).                                                  |
+| [`dbx cleanup:turbo`](#cleanup-turbo)                   | Remove the turbo cache (.turbo/).                                                               |
+| [`dbx migrate`](#migrate)                               | Migrate Biome / ESLint / Prettier / Dprint / Oxc config, or fold vite.config.* into dbx.config. |
+| [`dbx migrate:list`](#migrate-list)                     | List the registered migrations and whether each is detected.                                    |
+| [`dbx fmt`](#fmt)                                       | Format with the detected formatter (Vite+ Oxfmt, Prettier, Biome, dprint or Oxc).               |
+| [`dbx lint`](#lint)                                     | Lint with the detected linter (Vite+ Oxlint, ESLint or Biome).                                  |
+| [`dbx workflow`](#workflow)                             | Trigger generated workflows with their vendor CLI (`gh`, `glab` or `az`).                       |
+| [`dbx changelog`](#changelog)                           | Scan commits, derive the semver bump and update the CHANGELOG.md files + versions.              |
+| [`dbx mcp:serve`](#mcp-serve)                           | Run the dbx MCP server over stdio (for MCP clients).                                            |
+| [`dbx mcp:install`](#mcp-install)                       | Install the dbx MCP server + skill into an AI harness/editor.                                   |
+| [`dbx mcp:list`](#mcp-list)                             | List the builtin MCP providers (Claude, Codex, VS Code, OpenCode, Pi).                          |
+| [`dbx skills`](#skills)                                 | Check or install the official dbx toolchain skill for AI agents (docs lookup).                  |
 | [`dbx vite`](#vite)                                     | Run any Vite+ command through `vp` (eg. `dbx vite dev`).                                        |
 | [`dbx vite:create`](#vite-create)                       | Vite+: Create a new project from a template.                                                    |
 | [`dbx vite:migrate`](#vite-migrate)                     | Vite+: Migrate an existing project to Vite+.                                                    |
@@ -477,8 +480,6 @@ Generated from the same `CliCommand` descriptors the `dbx` binary registers.
 | [`dbx vite:toolchain`](#vite-toolchain)                 | Vite+: Show Vite+ tool versions.                                                                |
 | [`dbx vite:upgrade`](#vite-upgrade)                     | Vite+: Update `vp` itself.                                                                      |
 | [`dbx vite:implode`](#vite-implode)                     | Vite+: Remove `vp` and all related data.                                                        |
-| [`dbx fmt`](#fmt)                                       | Format with the detected formatter (Vite+ Oxfmt, Prettier, Biome, dprint or Oxc).               |
-| [`dbx lint`](#lint)                                     | Lint with the detected linter (Vite+ Oxlint, ESLint or Biome).                                  |
 
 ## `dbx projects`
 
@@ -559,137 +560,6 @@ Disable the toolchain (workspace scope by default).
 * `--workspace` — Set the workspace scope (`.vscode/settings.json`).
 * `--cwd ‹dir›` — Project root (default: cwd).
 * `--json` — Print the result as JSON.
-
-## `dbx tsconfig`
-
-Generate workspace tsconfig.json files from the default tsconfig (aliases + references).
-
-* `--glob ‹value...›` — Glob(s) for the workspace default tsconfig files. Defaults to matching every `defaultFile` recursively.
-* `--exclude ‹value...›` — Glob(s) to exclude from `glob`. Defaults to the common ignored paths (`node_modules`, `.dbx`, `dist`, `build`, ...).
-* `--no-gitignore` — Do not respect .gitignore files.
-* `--refs` — Wire project references.
-* `--composite` — Emit `composite: true`.
-* `--no-aliases` — Skip path aliases.
-* `--flatten-remote-extends` — Inline the compiler options inherited from a remote `http(s)` `extends` chain into the generated workspace configs. Useful when a tool cannot follow a remote URL; path-valued options such as `paths`/`baseUrl` are skipped because they describe the remote tree. Settings the generated config already defines always win.
-* `--auto-src-dir ‹value›` — Source directory used to resolve workspace entry points when `package.json` does not declare `exports`/`main`/`types` (default: the workspace's final tsconfig `rootDir`/`baseUrl`, falling back to `src`).
-* `-i, --indent ‹value›` — JSON indentation. (default: `4`)
-* `--root-file ‹value›` — The workspaces tsconfig file name that holds `paths` + `references`. (default: `tsconfig.workspaces.json`)
-* `--default-file ‹value›` — The workspace default tsconfig file name that the generator expands. (default: `tsconfig.default.json`)
-* `--build-file ‹value›` — The workspace build tsconfig file name. (default: `tsconfig.build.json`)
-* `--cwd ‹dir›` — Repo root to scan (default: cwd).
-* `--auto` — Auto-wire the root workspaces tsconfig paths/references from the project graph (default false).
-* `--no-auto` — Only use the paths/references already in the root workspaces tsconfig.
-* `--auto-aliases` — Auto-wire path aliases (defaults to --auto).
-* `--no-auto-aliases` — Do not auto-wire path aliases.
-* `--auto-refs` — Auto-wire project references (defaults to --auto).
-* `--no-auto-refs` — Do not auto-wire project references.
-* `--tsconfig ‹file›` — Resolve this tsconfig instead of \<root>/tsconfig.json.
-* `--root ‹dir›` — Root used to detect/resolve the tsconfig (default: cwd).
-* `--json` — Print the resolved { alias, paths, references } object.
-* `--alias` — Print only the resolved Vite/Vitest aliases.
-* `--paths` — Print only the resolved compilerOptions.paths.
-* `--references` — Print only the resolved project references.
-* `--no-extends` — Do not follow the tsconfig extends chain.
-* `--restore [kind]` — Remove the applied tsconfig overrides (all, or base|root|default|build) using the manifest snapshots.
-
-## `dbx cleanup`
-
-Remove build artifacts (\*.tsbuildinfo, dist/).
-
-* `--cwd ‹dir›` — Directory to clean (default: cwd).
-* `--pattern ‹glob...›` — Override the match globs.
-
-## `dbx cleanup:turbo`
-
-Remove the turbo cache (.turbo/).
-
-* `--cwd ‹dir›` — Directory to clean (default: cwd).
-
-## `dbx workflow`
-
-Trigger generated workflows with their vendor CLI (`gh`, `glab` or `az`).
-
-* `[workflows]` — Workflow ids, custom ids, or file names (default: every enabled workflow).
-* `--cwd ‹dir›` — Project root (default: cwd).
-* `--ref ‹ref›` — Git ref to run the workflow on.
-* `--gh ‹cmd›` — The gh executable (default: gh).
-* `--glab ‹cmd›` — The glab executable (default: glab).
-* `--az ‹cmd›` — The az executable (default: az).
-* `--list` — List the enabled workflows (and where they are written).
-* `--json` — With --list: print the workflows as JSON.
-
-## `dbx changelog`
-
-Scan commits, derive the semver bump and update the CHANGELOG.md files + versions.
-
-* `--range ‹range›` — Git revision range to scan.
-* `--dry-run` — Print the proposed entry without writing.
-* `--version ‹semver›` — Override the version.
-* `--base-version ‹semver›` — Bump from this version instead.
-* `--release-body ‹semver›` — Print the release body for this version and exit.
-* `--release-group` — Group every version since the previous published release into the body.
-* `--no-release-group` — Disable release grouping configured in the changelog config.
-* `--release-since ‹version›` — Group from this version/tag instead of the released boundary.
-* `--release-include-prereleases` — Let prerelease versions bound the grouped release body.
-* `--processing-method ‹method›` — `latest` (default), `all`, or a git range.
-* `--format-only` — Only regroup existing changelogs.
-* `--release-body-wrap` — Wrap the generated entry as a `**Release notes**` details block.
-* `--intro ‹text›` — Inline intro text for the new changelog entry.
-* `--intro-file ‹file›` — Read the new entry intro text from a file.
-* `--outro ‹text›` — Inline outro text for the new changelog entry.
-* `--outro-file ‹file›` — Read the new entry outro text from a file.
-* `--no-package-changes-section` — Skip the package-changes footer.
-
-## `dbx mcp:serve`
-
-Run the dbx MCP server over stdio (for MCP clients).
-
-* `--cwd ‹dir›` — Project root (default: cwd).
-
-## `dbx mcp:install`
-
-Install the dbx MCP server + skill into an AI harness/editor.
-
-* `--provider ‹id›` — claude, codex, vscode, opencode, pi or custom.
-* `--scope ‹scope›` — project (default) or global.
-* `--cwd ‹dir›` — Project root (default: cwd).
-* `--dir ‹dir›` — Custom directory (for --provider custom).
-* `--command ‹command›` — Client command (default `dbx`)
-* `--no-skills` — Do not write the skill/instructions file.
-* `--json` — Print the written paths as JSON.
-
-## `dbx mcp:list`
-
-List the builtin MCP providers (Claude, Codex, VS Code, OpenCode, Pi).
-
-* `--cwd ‹dir›` — Project root (default: cwd).
-* `--json` — Print the providers as JSON.
-
-## `dbx migrate`
-
-Migrate Biome / ESLint / Prettier / Dprint / Oxc config, or fold vite.config.\* into dbx.config.
-
-* `--from ‹tool›` — Source tool (repeatable): biome | eslint | prettier | dprint | oxc | vite | all.
-* `--to ‹tool›` — Target tool (default: oxc). (default: `oxc`)
-* `--cwd ‹dir›` — Project root (default: cwd).
-* `--recursive` — Also migrate the discovered projects under the root (default: root only).
-* `--write` — Write the files (default: dry-run).
-* `--dry-run` — Do not write anything (default).
-* `--check` — CI: exit non-zero when the oxc config is stale.
-* `--target ‹target›` — files (default) | vite.
-* `--online` — Allow network (e.g. @oxlint/migrate).
-* `--ignore-vite-config-file` — Do not remove the folded `vite.config.*`.
-* `--ignore-managed-files` — Skip the post-migration sync (leave the toolchain-managed files as-is).
-* `--ignore-changelog` — Skip the changelog task in the post-migration sync.
-* `--tool-version ‹name@range›` — Override a provisioned formatter/linter dependency version (repeatable).
-* `--json` — Print the result as JSON.
-
-## `dbx migrate:list`
-
-List the registered migrations and whether each is detected.
-
-* `--cwd ‹dir›` — Project root (default: cwd).
-* `--json` — Print as JSON.
 
 ## `dbx project:init`
 
@@ -853,6 +723,161 @@ Scaffold a project from a template (builtin, local or Vite+).
 * `--force` — Overwrite existing files in the output directory.
 * `--containerize` — Also generate Docker artifacts (Dockerfile + .dockerignore).
 * `--json` — Print the result as JSON.
+
+## `dbx tsconfig`
+
+Generate workspace tsconfig.json files from the default tsconfig (aliases + references).
+
+* `--glob ‹value...›` — Glob(s) for the workspace default tsconfig files. Defaults to matching every `defaultFile` recursively.
+* `--exclude ‹value...›` — Glob(s) to exclude from `glob`. Defaults to the common ignored paths (`node_modules`, `.dbx`, `dist`, `build`, ...).
+* `--no-gitignore` — Do not respect .gitignore files.
+* `--refs` — Wire project references.
+* `--composite` — Emit `composite: true`.
+* `--no-aliases` — Skip path aliases.
+* `--flatten-remote-extends` — Inline the compiler options inherited from a remote `http(s)` `extends` chain into the generated workspace configs. Useful when a tool cannot follow a remote URL; path-valued options such as `paths`/`baseUrl` are skipped because they describe the remote tree. Settings the generated config already defines always win.
+* `--auto-src-dir ‹value›` — Source directory used to resolve workspace entry points when `package.json` does not declare `exports`/`main`/`types` (default: the workspace's final tsconfig `rootDir`/`baseUrl`, falling back to `src`).
+* `-i, --indent ‹value›` — JSON indentation. (default: `4`)
+* `--root-file ‹value›` — The workspaces tsconfig file name that holds `paths` + `references`. (default: `tsconfig.workspaces.json`)
+* `--default-file ‹value›` — The workspace default tsconfig file name that the generator expands. (default: `tsconfig.default.json`)
+* `--build-file ‹value›` — The workspace build tsconfig file name. (default: `tsconfig.build.json`)
+* `--cwd ‹dir›` — Repo root to scan (default: cwd).
+* `--auto` — Auto-wire the root workspaces tsconfig paths/references from the project graph (default false).
+* `--no-auto` — Only use the paths/references already in the root workspaces tsconfig.
+* `--auto-aliases` — Auto-wire path aliases (defaults to --auto).
+* `--no-auto-aliases` — Do not auto-wire path aliases.
+* `--auto-refs` — Auto-wire project references (defaults to --auto).
+* `--no-auto-refs` — Do not auto-wire project references.
+* `--tsconfig ‹file›` — Resolve this tsconfig instead of \<root>/tsconfig.json.
+* `--root ‹dir›` — Root used to detect/resolve the tsconfig (default: cwd).
+* `--json` — Print the resolved { alias, paths, references } object.
+* `--alias` — Print only the resolved Vite/Vitest aliases.
+* `--paths` — Print only the resolved compilerOptions.paths.
+* `--references` — Print only the resolved project references.
+* `--no-extends` — Do not follow the tsconfig extends chain.
+* `--restore [kind]` — Remove the applied tsconfig overrides (all, or base|root|default|build) using the manifest snapshots.
+
+## `dbx cleanup`
+
+Remove build artifacts (\*.tsbuildinfo, dist/).
+
+* `--cwd ‹dir›` — Directory to clean (default: cwd).
+* `--pattern ‹glob...›` — Override the match globs.
+
+## `dbx cleanup:turbo`
+
+Remove the turbo cache (.turbo/).
+
+* `--cwd ‹dir›` — Directory to clean (default: cwd).
+
+## `dbx migrate`
+
+Migrate Biome / ESLint / Prettier / Dprint / Oxc config, or fold vite.config.\* into dbx.config.
+
+* `--from ‹tool›` — Source tool (repeatable): biome | eslint | prettier | dprint | oxc | vite | all.
+* `--to ‹tool›` — Target tool (default: oxc). (default: `oxc`)
+* `--cwd ‹dir›` — Project root (default: cwd).
+* `--recursive` — Also migrate the discovered projects under the root (default: root only).
+* `--write` — Write the files (default: dry-run).
+* `--dry-run` — Do not write anything (default).
+* `--check` — CI: exit non-zero when the oxc config is stale.
+* `--target ‹target›` — files (default) | vite.
+* `--online` — Allow network (e.g. @oxlint/migrate).
+* `--ignore-vite-config-file` — Do not remove the folded `vite.config.*`.
+* `--ignore-managed-files` — Skip the post-migration sync (leave the toolchain-managed files as-is).
+* `--ignore-changelog` — Skip the changelog task in the post-migration sync.
+* `--tool-version ‹name@range›` — Override a provisioned formatter/linter dependency version (repeatable).
+* `--json` — Print the result as JSON.
+
+## `dbx migrate:list`
+
+List the registered migrations and whether each is detected.
+
+* `--cwd ‹dir›` — Project root (default: cwd).
+* `--json` — Print as JSON.
+
+## `dbx fmt`
+
+Format with the detected formatter (Vite+ Oxfmt, Prettier, Biome, dprint or Oxc).
+
+* `--cwd ‹dir›` — Project root to run `vp` in (default: cwd).
+
+## `dbx lint`
+
+Lint with the detected linter (Vite+ Oxlint, ESLint or Biome).
+
+* `--cwd ‹dir›` — Project root to run `vp` in (default: cwd).
+
+## `dbx workflow`
+
+Trigger generated workflows with their vendor CLI (`gh`, `glab` or `az`).
+
+* `[workflows]` — Workflow ids, custom ids, or file names (default: every enabled workflow).
+* `--cwd ‹dir›` — Project root (default: cwd).
+* `--ref ‹ref›` — Git ref to run the workflow on.
+* `--gh ‹cmd›` — The gh executable (default: gh).
+* `--glab ‹cmd›` — The glab executable (default: glab).
+* `--az ‹cmd›` — The az executable (default: az).
+* `--list` — List the enabled workflows (and where they are written).
+* `--json` — With --list: print the workflows as JSON.
+
+## `dbx changelog`
+
+Scan commits, derive the semver bump and update the CHANGELOG.md files + versions.
+
+* `--range ‹range›` — Git revision range to scan.
+* `--dry-run` — Print the proposed entry without writing.
+* `--version ‹semver›` — Override the version.
+* `--base-version ‹semver›` — Bump from this version instead.
+* `--release-body ‹semver›` — Print the release body for this version and exit.
+* `--release-group` — Group every version since the previous published release into the body.
+* `--no-release-group` — Disable release grouping configured in the changelog config.
+* `--release-since ‹version›` — Group from this version/tag instead of the released boundary.
+* `--release-include-prereleases` — Let prerelease versions bound the grouped release body.
+* `--processing-method ‹method›` — `latest` (default), `all`, or a git range.
+* `--format-only` — Only regroup existing changelogs.
+* `--release-body-wrap` — Wrap the generated entry as a `**Release notes**` details block.
+* `--intro ‹text›` — Inline intro text for the new changelog entry.
+* `--intro-file ‹file›` — Read the new entry intro text from a file.
+* `--outro ‹text›` — Inline outro text for the new changelog entry.
+* `--outro-file ‹file›` — Read the new entry outro text from a file.
+* `--no-package-changes-section` — Skip the package-changes footer.
+
+## `dbx mcp:serve`
+
+Run the dbx MCP server over stdio (for MCP clients).
+
+* `--cwd ‹dir›` — Project root (default: cwd).
+
+## `dbx mcp:install`
+
+Install the dbx MCP server + skill into an AI harness/editor.
+
+* `--provider ‹id›` — claude, codex, vscode, opencode, pi or custom.
+* `--scope ‹scope›` — project (default) or global.
+* `--cwd ‹dir›` — Project root (default: cwd).
+* `--dir ‹dir›` — Custom directory (for --provider custom).
+* `--command ‹command›` — Client command (default `dbx`)
+* `--no-skills` — Do not write the skill/instructions file.
+* `--json` — Print the written paths as JSON.
+
+## `dbx mcp:list`
+
+List the builtin MCP providers (Claude, Codex, VS Code, OpenCode, Pi).
+
+* `--cwd ‹dir›` — Project root (default: cwd).
+* `--json` — Print the providers as JSON.
+
+## `dbx skills`
+
+Check or install the official dbx toolchain skill for AI agents (docs lookup).
+
+* `--official` — Install the official dbx docs skill (only when missing).
+* `--provider ‹id›` — claude, codex, vscode, opencode, pi or custom (default: all builtin).
+* `--scope ‹scope›` — project (default) or global.
+* `--cwd ‹dir›` — Project root (default: cwd).
+* `--dir ‹dir›` — Custom directory (for --provider custom).
+* `--force` — Overwrite an existing skill file.
+* `--json` — Print the status/results as JSON.
 
 ## `dbx vite`
 
@@ -1070,18 +1095,6 @@ Vite+: Remove `vp` and all related data.
 
 * `--cwd ‹dir›` — Project root to run `vp` in (default: cwd).
 
-## `dbx fmt`
-
-Format with the detected formatter (Vite+ Oxfmt, Prettier, Biome, dprint or Oxc).
-
-* `--cwd ‹dir›` — Project root to run `vp` in (default: cwd).
-
-## `dbx lint`
-
-Lint with the detected linter (Vite+ Oxlint, ESLint or Biome).
-
-* `--cwd ‹dir›` — Project root to run `vp` in (default: cwd).
-
 ---
 
 ---
@@ -1124,6 +1137,7 @@ environment variable with `.meta({ envName: "..." })` (see the
 | `DBX_SYNC`                          | toolchain | `{}`    | `dbx sync` behaviour (formatting of the generated managed files).                                                                                                                          |
 | `DBX_LOGGER`                        | toolchain | `{}`    | Logging level, colours and prefix for toolchain output.                                                                                                                                    |
 | `DBX_PROVIDERS`                     | toolchain | `{}`    | Provider command behaviour (eg. colour for the passthrough commands).                                                                                                                      |
+| `DBX_MCP`                           | toolchain | `{}`    | Install the official dbx skill (and MCP helpers) into AI agent harnesses.                                                                                                                  |
 
 ---
 
@@ -4070,6 +4084,68 @@ Enable/disable this section (default: enabled when defined).
 
 Regenerate this section's managed files during `dbx sync`. When false, existing files are left untouched and are neither written nor drift-checked.
 
+## `mcp`
+
+MCP server and skill installation for AI harnesses.
+
+### `skills`
+
+* **Type**: `boolean | ToolchainMcpSkillsConfig`
+
+Install the official dbx skill into agent harnesses during `dbx sync`. Opt in by defining this section.
+
+#### `agents`
+
+* **Type**: `'claude' | 'codex' | 'vscode' | 'opencode' | 'pi' | 'custom' | Array<'claude' | 'codex' | 'vscode' | 'opencode' | 'pi' | 'custom'>`
+
+Agent harness(es) to install into (default: every builtin provider). `custom` requires `dir`.
+
+#### `scope`
+
+* **Type**: `'project' | 'global'`
+* **Default**: `"project"`
+
+Write the skill into the project (default) or the user profile.
+
+#### `dir`
+
+* **Type**: `string`
+
+Custom directory to write the skill into (with `agents: ['custom']`).
+
+#### `force`
+
+* **Type**: `boolean`
+* **Default**: `false`
+
+Overwrite an existing skill file (default: keep it).
+
+#### `enabled`
+
+* **Type**: `boolean`
+
+Enable/disable this section (default: enabled when defined).
+
+#### `regenerate`
+
+* **Type**: `boolean`
+* **Default**: `true`
+
+Regenerate this section's managed files during `dbx sync`. When false, existing files are left untouched and are neither written nor drift-checked.
+
+### `enabled`
+
+* **Type**: `boolean`
+
+Enable/disable this section (default: enabled when defined).
+
+### `regenerate`
+
+* **Type**: `boolean`
+* **Default**: `true`
+
+Regenerate this section's managed files during `dbx sync`. When false, existing files are left untouched and are neither written nor drift-checked.
+
 ## Full example
 
 ```ts [dbx.config.ts]
@@ -4359,7 +4435,7 @@ const engine = createConfigEngine({
 });
 ```
 
-The generated types expose `…Base` and the main interface extends it; the
+The generated types expose `...Base` and the main interface extends it; the
 markdown and JSON Schema flatten the base fields into the top level.
 
 ### Hoist multiple groups
@@ -4375,7 +4451,7 @@ const engine = createConfigEngine({
 ```
 
 Both `base.port` and `server.host`, for example, become top-level fields in the
-generated `…Base` interface. Use `flatten: true` (or `flatten: { level }`) when
+generated `...Base` interface. Use `flatten: true` (or `flatten: { level }`) when
 you want all top-level keys flattened instead of selecting groups.
 
 ## Meta
@@ -4844,8 +4920,8 @@ await program.invokeAsync();
 ```
 
 `engine.cli.program.create()` accepts `argv`, `name`, `description`, `version`,
-`globalOptions`, `context`, `disableColors`, `writeOut`, `writeErr` and
-`format`. See the
+`globalOptions`, `context`, `disableColors`, `helpOnError`, `groups`, `sort`,
+`writeOut`, `writeErr` and `format`. See the
 [API reference](/guide/config-generator/api#program-members-and-options)
 for `invoke`/`invokeAsync`, hooks, help/error formatting and `bin`.
 
@@ -6423,21 +6499,24 @@ grouping command; it registers with its subcommands.
 
 A `ConfigProgram` exposes the runtime surface:
 
-| Member                                   | Description                                                            |
-| ---------------------------------------- | ---------------------------------------------------------------------- |
-| `commands`                               | The normalized commands (single command stays single).                 |
-| `globals`                                | The program-level global options.                                      |
-| `name()` / `description()` / `version()` | Set the metadata shown in help/version output.                         |
-| `output(writeOut, writeErr?)`            | Route help/version output; `writeErr` is reserved for error rendering. |
-| `globalOption()` / `globalOptions()`     | Append program-level globals.                                          |
-| `argv(values)`                           | Set the explicit argv used by `invoke()`.                              |
-| `withContext(context)`                   | Set the default host context.                                          |
-| `configure(format)`                      | Merge help/error formatting options.                                   |
-| `formatHelp(command?)`                   | Render program or command help.                                        |
-| `formatError(error)`                     | Render an error with the configured template.                          |
-| `invoke(argv?, context?)`                | Run synchronously (async handlers/resolvers throw).                    |
-| `invokeAsync(argv?, context?)`           | Run and await async handlers, hooks and resolvers.                     |
-| `hook()` / `hooks()`                     | Register inferred before/after hooks.                                  |
+| Member                                   | Description                                                             |
+| ---------------------------------------- | ----------------------------------------------------------------------- |
+| `commands`                               | The normalized commands (single command stays single).                  |
+| `globals`                                | The program-level global options.                                       |
+| `helpOnError`                            | Whether to print help after an invalid-argv error (`false` by default). |
+| `groups`                                 | Option/command grouping setting (`true` by default).                    |
+| `sort`                                   | Command ordering within each section (`'asc'` by default).              |
+| `name()` / `description()` / `version()` | Set the metadata shown in help/version output.                          |
+| `output(writeOut, writeErr?)`            | Route help/version output; `writeErr` is reserved for error rendering.  |
+| `globalOption()` / `globalOptions()`     | Append program-level globals.                                           |
+| `argv(values)`                           | Set the explicit argv used by `invoke()`.                               |
+| `withContext(context)`                   | Set the default host context.                                           |
+| `configure(format)`                      | Merge help/error formatting options.                                    |
+| `formatHelp(command?)`                   | Render program or command help.                                         |
+| `formatError(error)`                     | Render an error with the configured template.                           |
+| `invoke(argv?, context?)`                | Run synchronously (async handlers/resolvers throw).                     |
+| `invokeAsync(argv?, context?)`           | Run and await async handlers, hooks and resolvers.                      |
+| `hook()` / `hooks()`                     | Register inferred before/after hooks.                                   |
 
 Build the program through the engine — this is the preferred entry point because
 it infers the config/values types and accepts the full program options:
@@ -6465,17 +6544,57 @@ const program = engine.cli.program.create(
 ```
 
 `argv` defaults to `process.argv.slice(2)`, `name` defaults to `'program'`, and
-`disableColors` defaults to `false`. `program.configure()` merges formatting;
-`program.argv()`, `program.withContext()` and `program.output()` set the runtime
-pieces.
+`disableColors` defaults to `false`. Commands are sorted ascending by name in
+each help section by default; pass `sort: 'desc'` to reverse it or `sort: false`
+to keep declaration order (including inside groups). `program.configure()` merges
+formatting; `program.argv()`, `program.withContext()` and `program.output()` set
+the runtime pieces.
+
+`helpOnError` defaults to `false`, so invalid argv throws a
+`ConfigProgramError` without printing help. Pass `helpOnError: true` and append
+`program.formatHelp()` in your catch handler when you want the full help text:
+
+```ts
+program.invokeAsync().catch(error => {
+    console.error(error instanceof Error ? error.message : String(error));
+    if (error instanceof ConfigProgramError && program.helpOnError) {
+        console.error(program.formatHelp());
+    }
+    process.exitCode = 1;
+});
+```
+
+`groups` defaults to `true`, so help groups both option and command lists.
+Commands are grouped by their delimited name path (`vite:list` ->
+`Vite commands:`), while options use their explicit `group` labels. Set
+`groups: false` for flat lists, or `groups: { auto: false }` to only honor
+explicit `group` labels on commands. `delimiter` accepts one string or an array
+(default `':'`). Command entries within every section (including groups) are
+sorted by `sort` (`'asc'` by default; `'desc'` or `false` to change/disable).
+
+```ts
+const program = engine.cli.program.create(
+    cmd => [
+        cmd('sync', { name: 'sync', run: syncHandler }),
+        cmd('vite:list', { name: 'vite:list', run: listHandler }), // -> Vite commands:
+        cmd('serve:status', {
+            name: 'serve:status',
+            group: 'Server',
+            run: statusHandler,
+        }),
+    ],
+    { groups: { delimiter: [':', '/'] } }
+);
+```
 
 Use the lower-level `createConfigProgram(commands, options?)` only when you
 already have a command list that is not tied to an engine. It accepts the same
 options and is what `engine.cli.program.create()` calls internally.
 
 Program types: `ConfigProgram`, `ConfigProgramOptions`,
-`ConfigProgramFormatOptions`, `ConfigProgramCommand`, `ConfigScopeCommand`,
-`ConfigCommandBuilder`, `ConfigEngineCliProgram` and `ConfigProgramError`.
+`ConfigProgramFormatOptions`, `ConfigProgramGroupsOptions`,
+`ConfigProgramCommand`, `ConfigScopeCommand`, `ConfigCommandBuilder`,
+`ConfigEngineCliProgram` and `ConfigProgramError`.
 
 The standalone equivalent is
 `generateConfigProgram(schema, { envPrefix, ... })`: it returns `CliCommand[]`
@@ -6489,7 +6608,8 @@ Invalid argv throws a `ConfigProgramError` with `code` (for example
 `unknownCommand`, `unknownOption`, `missingOptionValue`, `invalidValue`,
 `missingCommand`), `input` and an optional misspelling `suggestion`. Use
 `format.error.messages` to override the messages and `program.formatError()` to
-render one.
+render one. Help is only printed when `helpOnError` is enabled (see
+[Program members and options](#program-members-and-options)).
 
 Options and subcommands have commander-style shorthands as well as array forms:
 
@@ -6522,6 +6642,35 @@ engine.cli.program.create(cmd => [
 same inputs spread as separate arguments. A subcommand definition may be an
 already-built `CliCommand`, a `[scope, setup]` / `[scope, description, setup]`
 tuple, or `{ scope, description?, setup? }`.
+
+#### Grouped options
+
+Give an option a `group` label to render it under its own heading. Ungrouped
+options stay in the default `Options:` section; groups appear in
+first-appearance order, merge case-insensitively and render as
+`<Group> options:`. Grouping applies to program globals and command options
+alike, and `groups: false` flattens option groups too.
+
+```ts
+cmd('sync')
+    .options([
+        { flags: '--check', description: 'Check only.' },
+        { flags: '--trace', description: 'Trace resolution.', group: 'Diagnostics' },
+        { flags: '--profile', description: 'Write a profile.', group: 'Diagnostics' },
+    ])
+    .run(syncHandler);
+```
+
+`formatHelp` prints:
+
+```text
+Options:
+  --check   Check only.
+
+Diagnostics options:
+  --trace   Trace resolution.
+  --profile Write a profile.
+```
 
 #### Global options
 
@@ -10517,6 +10666,7 @@ code --install-extension deltabox.toolchain-vscode
 | Run Vite+ command...                                      | QuickPick over the Vite+ provider commands, run in a terminal.                                                                                                                                           |
 | Create Vite+ project...                                   | `vp create` in a terminal.                                                                                                                                                                               |
 | Install MCP server + skill...                             | `dbx mcp:install` with a provider picker (Claude, Codex, VS Code, OpenCode, Pi or a custom directory).                                                                                                   |
+| Install official skill...                                 | `dbx skills --official` with a provider picker; adds the official dbx docs skill only when missing.                                                                                                      |
 | List MCP installations                                    | `dbx mcp:list` — show where the MCP server + skill are installed.                                                                                                                                        |
 | Generate changelog                                        | Run `dbx changelog` in the selected project.                                                                                                                                                             |
 | Clean build artifacts                                     | Remove `dist/` and `*.tsbuildinfo` (`dbx cleanup`).                                                                                                                                                      |
@@ -10756,6 +10906,7 @@ Search for `deltabox:` to find:
 * **Run Vite+ command...**
 * **Create Vite+ project...**
 * **Install MCP server + skill...**
+* **Install official skill...**
 * **List MCP installations**
 * **Generate changelog**
 * **Clean build artifacts**
@@ -11772,8 +11923,8 @@ import {
 
 | Export                                 | Description                                                            |
 | -------------------------------------- | ---------------------------------------------------------------------- |
-| `createCli(commands?)`                 | Build the `dbx` engine program (global flags + built-in commands).     |
-| `runCli(argv?)`                        | Parse and run the CLI (extracts logger flags, then defaults Vite+).    |
+| `createCli(commands?, options?)`       | Build the `dbx` engine program (global flags + built-in commands).     |
+| `runCli(argv?, options?)`              | Parse and run the CLI (extracts logger flags, then defaults Vite+).    |
 | `builtinCommands()`                    | The commands built into the root CLI (config commands need an engine). |
 | `withCliContext(commands)`             | Wrap commands with dbx config loading, logging and framing.            |
 | `withDefaultVite(argv, commandNames?)` | Insert `vite` before a bare Vite+ command (built-ins win).             |
@@ -11783,6 +11934,22 @@ import {
 `createCli(commands)` accepts a typed command array (for example from
 `defineCliCommand`) and keeps the command/option types on `program.commands`;
 `createCli()` uses `builtinCommands()`.
+
+Invalid argv prints only the error message by default. Pass
+`{ helpOnError: true }` to `createCli({ helpOnError: true })`,
+`createCli(commands, { helpOnError: true })` or
+`runCli(argv, { helpOnError: true })` to also print the full help after an
+unknown option/command or a bad value.
+
+`dbx` groups options and commands by default: `vite:list` is listed under a
+`Vite+ commands:` heading. The built-in commands mirror the docs sidebar:
+core workspace commands stay under `Commands:`, followed by
+`Project & templates`, `Tooling`, `Automation & API`, `Agents` and `Vite+`.
+Commands are sorted ascending by name within each section by default; pass
+`{ sort: 'desc' }` to reverse that or `{ sort: false }` to keep registration
+order (in groups too). Pass `{ groups: false }` for flat lists, or
+`{ groups: { auto: false } }` to only honor explicit command groups. The same
+options work through `createCli` and `runCli`.
 
 `extractLogOptions` makes the logger flags work before *or* after the
 subcommand and stops at `--`, so a wrapped binary's own flags are never eaten.
@@ -11989,6 +12156,82 @@ paths that were written.
 
 The VS Code extension exposes the same flow from **Install MCP server + skill...**
 (and the Home view's Quick Actions).
+
+## Skills
+
+`dbx skills` installs the **official dbx toolchain skill** without the MCP
+server. The skill is documentation-only: it tells the agent to read
+[`https://toolchain.deltabox.studio/llms.txt`](https://toolchain.deltabox.studio/llms.txt)
+and follow the relevant docs page before answering or editing files. It also
+tells the agent to inspect the project first:
+
+* `dbx.config.*` / `vite.config.*` (with the `dbx()` plugin) and
+  `.vscode/settings.json` (`deltabox.toolchain.enabled`) to see whether the
+  toolchain is enabled.
+* `.dbx/toolchain/projects.json` for the project graph and config locations, and
+  `.dbx/toolchain/manifest.json` for managed files.
+* The enabled `toolchain` sections, so conventions such as commitlint/changelog
+  commit messages are respected.
+
+```sh
+dbx skills                                  # list the install status per agent
+dbx skills --official                       # install for every builtin agent
+dbx skills --official --provider claude     # one agent
+dbx skills --official --provider vscode --scope global
+dbx skills --official --provider custom --dir ./tools/agent
+dbx skills --official --force               # overwrite an existing skill
+```
+
+Installs are idempotent: an existing skill file is left untouched unless
+`--force` is passed, so local edits are preserved. `--json` prints the status or
+write results.
+
+### Automatic installation
+
+Opt in through `toolchain.mcp.skills`; `dbx sync` (and `dbx watch`) then adds the
+skill wherever it is missing:
+
+```ts
+export default defineConfig({
+    toolchain: {
+        mcp: {
+            skills: {
+                agents: ['claude', 'vscode'],
+                scope: 'project',
+            },
+        },
+    },
+});
+```
+
+| Option    | Meaning                                                         |
+| --------- | --------------------------------------------------------------- |
+| `agents`  | Agent id or ids (default: every builtin provider).              |
+| `scope`   | `project` (default) or `global`.                                |
+| `dir`     | Custom directory (with `agents: ['custom']`).                   |
+| `force`   | Overwrite existing files (default: `false`).                    |
+| `enabled` | Set `false` to keep the section configured but stop installing. |
+
+The skill paths mirror the MCP provider table above, using the
+`deltabox-toolchain` stem (for example
+`.claude/skills/deltabox-toolchain/SKILL.md`). The VS Code extension adds an
+**Install official skill...** prompt action alongside the MCP installer.
+
+### Programmatic API
+
+```ts
+import {
+    checkSkill,
+    installOfficialSkill,
+    installSkill,
+    resolveMcpSkillsConfig,
+} from '@deltabox/toolchain/mcp';
+
+checkSkill({ agent: 'claude', cwd }); // { path, exists }
+installOfficialSkill({ agent: 'claude', cwd }); // writes only when missing
+installSkill({ agent: 'vscode', scope: 'global', force: true });
+resolveMcpSkillsConfig(config); // the configured agents/scope, or undefined
+```
 
 ---
 
@@ -12627,7 +12870,7 @@ are not merged into the GitHub Release body.
 ## Grouped release bodies
 
 By default the body stops at the previous released version. When a project
-publishes prereleases (for example `3.0.0-beta.1` … `3.0.0-beta.16` before
+publishes prereleases (for example `3.0.0-beta.1` ... `3.0.0-beta.16` before
 `3.0.0`), the stable GitHub Release would only mention the changes since the last
 beta. Set `release.group` to treat every version since the previous **published**
 release as one version:
@@ -13379,6 +13622,7 @@ the shell consumed without leaving a trace still cannot be recovered.
   `commitlint` or the markdown.
 * **Preview the entry**: `dbx changelog --dry-run` prints the proposed entry —
   check it for stray `\`, `\r`, `\b`, `\t` or mojibake before releasing.
+* Prefer to highlight references and nouns like `npm`, `index.ts`, `some/path`, `https://hello.world`, `Vite`, `SomeType`, `funcName()`, `import { ... } from 'yes'`, `#fff`, `a-package-name`, and so on in the commit messages, for better readability for end-users.
 
 ---
 
@@ -14675,7 +14919,7 @@ Full changelog
 
 * Improved changelog and release notes formatting.
 * Managed `tsconfig.json` now declaring `include`/`exclude`/`compilerOptions.types` from extended tsconfig.
-* UTF-8 BOM support (great for Windows Powershell users).
+* UTF-8 BOM support (great for shells).
 * Dockerfiles that build from a fresh scaffold.
 * Scaffold-only Docker generation.
 * `--online` for online templates.
@@ -15198,6 +15442,16 @@ The v3 line also adds a large set of capabilities on top of v2, grouped by area:
   `project.manageConfigless`.
 * `dbx enable` / `dbx disable` and the `dbx enabled` command.
 * A reusable CLI docs generator (`engine.markdown.cli`) for command references.
+* Grouped and sorted help: `group` labels on options and commands, a `groups`
+  program option (`true` or `{ auto, delimiter }`) that automatically groups
+  commands by their delimited name path (`vite:list` -> `Vite commands:`), and
+  `sort: 'asc' | 'desc' | false` for deterministic ordering (ascending by
+  default, including inside groups). `dbx --help` groups its own commands like
+  the docs sidebar. See
+  [program options](/guide/config-generator/api#program-members-and-options).
+* `helpOnError` on the program (and on `createCli` / `runCli`) opts back into
+  printing the full help after invalid argv; the default now prints only the
+  error message.
 * `dbx test:repo`, plus readable spinners and surfaced Vite+ passthrough errors.
 
 ### Vite+, formatting and task running
@@ -15227,6 +15481,15 @@ The v3 line also adds a large set of capabilities on top of v2, grouped by area:
 
 * An MCP server, installers for Claude, Codex, VS Code, OpenCode, Pi and custom
   directories, and the `dbx mcp:*` commands.
+* The official dbx docs skill: `dbx skills --official` installs it per agent
+  (`--provider`) and location (`--scope` / `--dir`), checks first and never
+  overwrites unless `--force`. The `checkSkill` / `installSkill` /
+  `installOfficialSkill` APIs expose the same flow. The skill tells agents to
+  read [`llms.txt`](https://toolchain.deltabox.studio/llms.txt) and inspect the
+  project config, graph and managed-file manifest before acting. See
+  [Skills](/guide/mcp#skills).
+* Opt-in automatic skill installation through `toolchain.mcp.skills`; `dbx sync`
+  adds missing skills for the configured agents.
 
 ### Changelog and CI
 
@@ -15251,6 +15514,9 @@ The v3 line also adds a large set of capabilities on top of v2, grouped by area:
 * Managed-file decorations and a reveal-active-project action.
 * Plugin-mode projects, MCP install and improved sync UX; sync notifications,
   `sync all`, a migration target picker and `manageConfigless` support.
+* The official dbx skill installer (`dbx skills --official`) is available from
+  the action palette, the Command Palette and the Home Quick Actions, with the
+  same agent/location picker as the MCP installer.
 * A Docker prompt while scaffolding, plus generic format/lint actions and
   formatting settings.
 * The workflow provider in the run picker.
@@ -15425,6 +15691,13 @@ If you version workspaces individually, opt excluded packages out of the glob:
 
 * `--no-color` now also disables the configured help/error colours. A custom
   program can implement the same switch with the `disableColors` program option.
+* Invalid argv (unknown command/option, missing value) prints only the error
+  message by default. Pass `helpOnError: true` to a `ConfigProgram`, or to
+  `createCli` / `runCli` via `RootCliOptions`, to append the full help text
+  again.
+* Help command lists are grouped and sorted alphabetically by default. Use the
+  `groups` and `sort` program options to opt out (`groups: false`,
+  `sort: false`) or change the order (`sort: 'desc'`).
 * `dbx sync --json` always emits a JSON envelope, including when the config
   failed to load (`{ results: [], upToDate: false, error }`).
 * `dbx projects --max-depth` rejects non-numeric values instead of silently
@@ -15805,8 +16078,8 @@ sync task (see the [Providers](/guide/providers) guide).
 | Export                                 | Description                                                                |
 | -------------------------------------- | -------------------------------------------------------------------------- |
 | `builtinCommands()`                    | The commands built into the root CLI (config commands need an engine).     |
-| `createCli(commands?)`                 | Build the `dbx` program; pre-typed arrays keep their command/option types. |
-| `runCli(argv?)`                        | Parse and run the CLI (extracts logger flags, defaults bare Vite+).        |
+| `createCli(commands?, options?)`       | Build the `dbx` program; pre-typed arrays keep their command/option types. |
+| `runCli(argv?, options?)`              | Parse and run the CLI (extracts logger flags, defaults bare Vite+).        |
 | `withDefaultVite(argv, commandNames?)` | Insert `vite` before a bare Vite+ command.                                 |
 | `extractLogOptions(argv)`              | Pull `--log-level` / `--color` / `--no-color` out of argv.                 |
 
@@ -15938,8 +16211,8 @@ await program.invokeAsync();
 
 For config-driven commands, `engine.cli.program.create(...)` builds the program
 runtime with schema-derived options and typed `run` values. It accepts the full
-program options, including `globalOptions`, `disableColors`, `format`, `argv` and
-the output hooks. See
+program options, including `globalOptions`, `disableColors`, `helpOnError`,
+`groups`, `sort`, `format`, `argv` and the output hooks. See
 [Running a built program](/guide/config-generator/api#running-a-built-program)
 and the
 [program members](/guide/config-generator/api#program-members-and-options).
@@ -16282,6 +16555,96 @@ the repository at
 url: https://toolchain.deltabox.studio/CHANGELOG.md
 ---
 # Changelog
+
+## 3.0.0-beta.13 (November 2026)
+
+#### Config
+
+* Sort help commands and add a sort option ([#518d057](https://github.com/deltabox-studio/toolchain/commit/518d057) by [T0chi](https://github.com/T0chi))
+
+  * Commands now render in ascending name order within every help section, including command groups. A new sort option accepts 'asc' (default), 'desc' or false (declaration order), is exposed as program.sort and threads through createCli/runCli via RootCliOptions. Group headings keep their first-appearance order so the dogfood sidebar grouping is preserved. Docs and llms bundle updated.
+
+* Group commands by delimited name paths ([#8598303](https://github.com/deltabox-studio/toolchain/commit/8598303) by [T0chi](https://github.com/T0chi))
+
+  * Add a groups program option (default true) that renders help commands in grouped sections. With auto enabled (default) commands sharing a name path such as vite:list are grouped under a capitalised heading using the configured delimiter(s), defaulting to ':'. Explicit CliCommand/ConfigProgramCommand group labels override the derived group, groups:false renders a flat list, and groups:{auto:false} only honours explicit groups. dbx createCli/runCli expose the same option.
+
+* Group help options by heading ([#4815336](https://github.com/deltabox-studio/toolchain/commit/4815336) by [T0chi](https://github.com/T0chi))
+
+  * CliOption gains an optional group label. The default help renderer keeps ungrouped options under Options: and prints each group under its own capitalised heading (case-insensitive, first-appearance order). Grouping works for command options and program globals; the help/format docs and llms bundle are updated.
+
+#### Cli
+
+* Group the dogfood commands and options like the docs sidebar ([#4d986db](https://github.com/deltabox-studio/toolchain/commit/4d986db) by [T0chi](https://github.com/T0chi))
+
+  * Apply the new group feature to the built-in dbx CLI. Core workspace commands stay under Commands:, followed by Project & templates, Tooling, Automation & API, Agents and Vite+ headings in docs-sidebar order. Options gain per-command groups (sync, changelog, migrate, project/template scaffolding, tsconfig, MCP/skills, ...), with groups:false and auto:false still behaving as documented. The generated CLI reference and llms bundle are refreshed.
+
+* Make help-on-error opt-in ([#2a01d42](https://github.com/deltabox-studio/toolchain/commit/2a01d42) by [T0chi](https://github.com/T0chi))
+
+  * Invalid argv no longer appends the full program help automatically, so failures stay short and scriptable. Config programs gain a helpOnError option (exposed as the readonly program.helpOnError), and dbx's createCli/runCli accept { helpOnError: true } to restore the old behavior. Defaults to false and matches the config engine cli program option.
+
+#### Mcp
+
+* Teach the official skill to inspect the project ([#1982ac2](https://github.com/deltabox-studio/toolchain/commit/1982ac2) by [T0chi](https://github.com/T0chi))
+
+  * The installed skill now tells agents to check whether dbx is enabled via dbx.config.*, a vite.config.* dbx() plugin or .vscode/settings.json (deltabox.toolchain.enabled), read .dbx/toolchain/projects.json for the project graph/config locations and manifest.json for managed files, and inspect the enabled toolchain sections. It calls out commitlint/changelog conventions for commits and documents sync --check.
+
+* Add the official dbx skill installer ([#359e166](https://github.com/deltabox-studio/toolchain/commit/359e166) by [T0chi](https://github.com/T0chi))
+
+  * Introduce the official docs skill, which tells agents to read https://toolchain.deltabox.studio/llms.txt before answering or editing. The mcp package gains checkSkill/installSkill/installOfficialSkill (idempotent, forceable), a 'dbx skills --official' command with provider/scope/dir options, and a skills sync task driven by the new toolchain.mcp.skills section (opt-in by presence). The VS Code extension exposes an 'Install official skill' prompt action and Home quick action. Config types, schema, generated reference and docs are updated.
+
+#### Config
+
+* Suffix grouped help headings with options or commands ([#342825a](https://github.com/deltabox-studio/toolchain/commit/342825a) by [T0chi](https://github.com/T0chi))
+
+  * Named option groups now render as '\<Group> options:' and command groups as '\<Group> commands:', while the default sections stay 'Options:' and 'Commands:'. The program 'groups' option now also flattens option groups when false, so the same toggle controls every help group.
+
+- Cover grouped help, sorting and the official skill in v2-v3 ([#d01d5f9](https://github.com/deltabox-studio/toolchain/commit/d01d5f9) by [T0chi](https://github.com/T0chi))
+
+  * Document the groups/sort program options, opt-in helpOnError, the dbx skills command and API, toolchain.mcp.skills automatic installation, and the VS Code skill installer action in the migration guide.
+
+- Update documentation ([#ba637c3](https://github.com/deltabox-studio/toolchain/commit/ba637c3) by [T0chi](https://github.com/T0chi))
+
+#### Cli
+
+* Document the dogfood command groups ([#dcd6d1b](https://github.com/deltabox-studio/toolchain/commit/dcd6d1b) by [T0chi](https://github.com/T0chi))
+
+  * List the built-in help groups and their docs-sidebar order.
+
+#### Config
+
+* Clarify that groups covers options and commands ([#c80cc9c](https://github.com/deltabox-studio/toolchain/commit/c80cc9c) by [T0chi](https://github.com/T0chi))
+
+  * The groups program option flattens both option and command groups when false and auto only affects derived command groups. Update the option JSDoc, RootCliOptions docs and guides to say so explicitly.
+
+- Replace remaining unicode ellipses ([#0bc4a05](https://github.com/deltabox-studio/toolchain/commit/0bc4a05) by [T0chi](https://github.com/T0chi))
+
+  * Normalize the docs committed after the last formatter pass so check stays clean.
+
+## 3.0.0-beta.12 (November 2026)
+
+#### Release
+
+* Mark prerelease versions as GitHub prereleases ([#dd1c62f](https://github.com/deltabox-studio/toolchain/commit/dd1c62f) by [T0chi](https://github.com/T0chi))
+
+#### Changelog
+
+* Document bump rules and harden versioning providers ([#5ae5e02](https://github.com/deltabox-studio/toolchain/commit/5ae5e02) by [T0chi](https://github.com/T0chi))
+* Group release bodies since the last published release ([#93b8762](https://github.com/deltabox-studio/toolchain/commit/93b8762) by [T0chi](https://github.com/T0chi))
+
+#### Changelog
+
+* Repair and audit markdown code fences ([#8a4ab01](https://github.com/deltabox-studio/toolchain/commit/8a4ab01) by [T0chi](https://github.com/T0chi))
+
+- Update permalinks ([#5abe04e](https://github.com/deltabox-studio/toolchain/commit/5abe04e) by [T0chi](https://github.com/T0chi))
+- Add a deprecations section to the v2-v3 guide ([#3121d44](https://github.com/deltabox-studio/toolchain/commit/3121d44) by [T0chi](https://github.com/T0chi))
+
+#### Release
+
+* Clarify auto prerelease detection ([#bc5c01f](https://github.com/deltabox-studio/toolchain/commit/bc5c01f) by [T0chi](https://github.com/T0chi))
+
+#### Changelog
+
+* Add a release bodies guide under the changelog section ([#e00a44b](https://github.com/deltabox-studio/toolchain/commit/e00a44b) by [T0chi](https://github.com/T0chi))
 
 ## 3.0.0-beta.11 (November 2026)
 

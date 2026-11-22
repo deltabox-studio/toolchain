@@ -5,11 +5,17 @@ import path from 'node:path';
 import { describe, expect, it, vi } from 'vite-plus/test';
 
 import { addProjectProviderRegistry } from '@deltabox/toolchain/core';
-import { getLogOverrides, logger, setLogOverrides } from '@deltabox/toolchain/shared';
+import {
+    type CliCommand,
+    getLogOverrides,
+    logger,
+    setLogOverrides,
+} from '@deltabox/toolchain/shared';
 
 import { projectsCommand } from '../src/cli/commands/projects.js';
 import { providerPassthroughCommands } from '../src/cli/commands/providers.js';
 import { extractConfigSelection } from '../src/cli/config-selection.js';
+import { withDogfoodGroups } from '../src/cli/groups.js';
 import {
     builtinCommands,
     createCli,
@@ -65,6 +71,7 @@ describe('dbx CLI', () => {
         expect(names).toContain('cleanup');
         expect(names).toContain('cleanup:turbo');
         expect(names).toContain('changelog');
+        expect(names).toContain('skills');
         expect(names).toContain('project:init');
         expect(names).toContain('fmt');
         expect(names).toContain('lint');
@@ -96,6 +103,197 @@ describe('dbx CLI', () => {
         expect(program.formatHelp()).toContain('dbx');
     });
 
+    it('groups built-in commands by default', () => {
+        const grouped = createCli().formatHelp();
+        expect(grouped).toContain('Vite+ commands:');
+        expect(grouped.slice(grouped.indexOf('Vite+ commands:'))).toContain('vite:build');
+
+        const flat = createCli({ groups: false }).formatHelp();
+        expect(flat).not.toContain('Vite+ commands:');
+        expect(flat).toContain('vite:build');
+    });
+
+    it('disables explicit groups through createCli options', () => {
+        const commands = [
+            {
+                name: 'serve',
+                description: 'Serve.',
+                group: 'Server',
+                options: [
+                    { flags: '--port <value>', description: 'Port.' },
+                    { flags: '--trace', description: 'Trace.', group: 'Diagnostics' },
+                ],
+                run: () => {},
+            },
+        ];
+
+        const flat = createCli(commands, { groups: false });
+        expect(flat.formatHelp()).not.toContain('Server commands:');
+        expect(flat.formatHelp('serve')).not.toContain('Diagnostics options:');
+        expect(flat.formatHelp('serve')).toContain('--trace');
+
+        const explicit = createCli(commands, { groups: { auto: false } });
+        expect(explicit.formatHelp()).toContain('Server commands:');
+        expect(explicit.formatHelp('serve')).toContain('Diagnostics options:');
+    });
+
+    it('flattens command groups through runCli RootCliOptions', async () => {
+        const write = vi.spyOn(logger, 'write').mockImplementation(() => {});
+        const helpText = (): string =>
+            write.mock.calls
+                .filter(([channel]) => channel === 'out')
+                .map(([, text]) => text)
+                .join('');
+        try {
+            await runCli(['node', 'dbx', '--help'], { groups: false });
+            expect(helpText()).not.toContain('Vite+ commands:');
+            expect(helpText()).toContain('vite:build');
+
+            // Explicit dogfood groups survive `auto: false`; only derived groups stop.
+            write.mockClear();
+            await runCli(['node', 'dbx', '--help'], { groups: { auto: false } });
+            expect(helpText()).toContain('Vite+ commands:');
+            expect(helpText()).toContain('vite:build');
+
+            write.mockClear();
+            await runCli(['node', 'dbx', '--help']);
+            expect(helpText()).toContain('Vite+ commands:');
+        } finally {
+            write.mockRestore();
+        }
+    });
+
+    it('sorts built-in commands in runCli help with RootCliOptions', async () => {
+        const write = vi.spyOn(logger, 'write').mockImplementation(() => {});
+        const helpText = (): string =>
+            write.mock.calls
+                .filter(([channel]) => channel === 'out')
+                .map(([, text]) => text)
+                .join('')
+                .replace(/\u001b\[[0-9;]*m/g, '');
+        const lineOf = (text: string, name: string): number => text.indexOf(`\n  ${name} `);
+        try {
+            await runCli(['node', 'dbx', '--help']);
+            const asc = helpText();
+            expect(lineOf(asc, 'disable')).toBeLessThan(lineOf(asc, 'enable'));
+            expect(lineOf(asc, 'enable')).toBeLessThan(lineOf(asc, 'projects'));
+            expect(asc).toContain('Vite+ commands:');
+
+            write.mockClear();
+            await runCli(['node', 'dbx', '--help'], { sort: 'desc' });
+            const desc = helpText();
+            expect(lineOf(desc, 'watch')).toBeLessThan(lineOf(desc, 'sync'));
+            expect(lineOf(desc, 'sync')).toBeLessThan(lineOf(desc, 'reset'));
+            expect(desc).toContain('Vite+ commands:');
+
+            write.mockClear();
+            await runCli(['node', 'dbx', '--help'], { sort: false });
+            const off = helpText();
+            expect(lineOf(off, 'projects')).toBeLessThan(lineOf(off, 'sync'));
+            expect(off).toContain('Vite+ commands:');
+        } finally {
+            write.mockRestore();
+        }
+    });
+
+    it('groups the built-in commands like the docs sidebar', () => {
+        const groups = Object.fromEntries(
+            builtinCommands().map(command => [command.name, command.group])
+        );
+        expect(groups.sync).toBeUndefined();
+        expect(groups['project:init']).toBe('Project & templates');
+        expect(groups['template:list']).toBe('Project & templates');
+        expect(groups.tsconfig).toBe('Tooling');
+        expect(groups.changelog).toBe('Automation & API');
+        expect(groups['mcp:serve']).toBe('Agents');
+        expect(groups.skills).toBe('Agents');
+        expect(groups.vite).toBe('Vite+');
+        expect(groups['vite:build']).toBe('Vite+');
+
+        const help = createCli().formatHelp();
+        const headings = [
+            'Project & templates commands:',
+            'Tooling commands:',
+            'Automation & API commands:',
+            'Agents commands:',
+            'Vite+ commands:',
+        ];
+        let previous = help.indexOf('Commands:');
+        expect(previous).toBeGreaterThan(-1);
+        for (const heading of headings) {
+            const index = help.indexOf(heading);
+            expect(index, heading).toBeGreaterThan(previous);
+            previous = index;
+        }
+        expect(help.slice(help.indexOf('Project & templates commands:'))).toContain('project:init');
+        expect(help.slice(help.indexOf('Agents commands:'))).toContain('skills');
+        expect(help.slice(help.indexOf('Vite+ commands:'))).toContain('vite:build');
+
+        const flat = createCli({ groups: false }).formatHelp();
+        for (const heading of headings) expect(flat).not.toContain(heading);
+        expect(flat).toContain('project:init');
+        expect(flat).toContain('vite:build');
+    });
+
+    it('groups the built-in command options', () => {
+        const program = createCli();
+        const changelog = program.formatHelp('changelog');
+        for (const heading of [
+            'Range options:',
+            'Release options:',
+            'Text options:',
+            'Formatting options:',
+            'Output options:',
+        ]) {
+            expect(changelog, heading).toContain(heading);
+        }
+        expect(changelog).toContain('--release-body');
+
+        const sync = program.formatHelp('sync');
+        for (const heading of [
+            'Sync options:',
+            'Tasks options:',
+            'Formatting options:',
+            'Output options:',
+        ]) {
+            expect(sync, heading).toContain(heading);
+        }
+
+        const skills = program.formatHelp('skills');
+        for (const heading of ['Action options:', 'Target options:', 'Output options:']) {
+            expect(skills, heading).toContain(heading);
+        }
+
+        // RootCliOptions still disables the dogfood option groups.
+        const flat = createCli({ groups: false }).formatHelp('changelog');
+        expect(flat).not.toContain('Release options:');
+        expect(flat).toContain('--release-body');
+    });
+
+    it('preserves explicit dogfood groups and leaves unknown entries flat', () => {
+        const input: CliCommand[] = [
+            {
+                name: 'changelog',
+                description: 'Changelog.',
+                group: 'Custom',
+                options: [{ flags: '--x', description: 'X.', group: 'Explicit' }],
+                run: () => {},
+            },
+            {
+                name: 'custom-thing',
+                description: 'Custom.',
+                options: [{ flags: '--y', description: 'Y.' }],
+                run: () => {},
+            },
+        ];
+        const [custom, unknown] = withDogfoodGroups(input);
+
+        expect(custom?.group).toBe('Custom');
+        expect(custom?.options?.[0]?.group).toBe('Explicit');
+        expect(unknown?.group).toBeUndefined();
+        expect(unknown?.options?.[0]?.group).toBeUndefined();
+    });
+
     it('flags provider passthrough commands but not built-ins', () => {
         expect(isPassthroughCommand()).toBe(false);
         setPassthroughCommand(true);
@@ -118,6 +316,48 @@ describe('dbx CLI', () => {
         ]);
         await program.invokeAsync(['changelog', '--version', '1.5.0']);
         expect(seen).toEqual(['1.5.0']);
+    });
+
+    it('routes hyphenated changelog options to the selected command', async () => {
+        // Regression for the Release workflow: `dbx changelog --release-body
+        // <semver>` was rejected by the root program as an unknown option.
+        const seen: Record<string, unknown>[] = [];
+        const commands = builtinCommands().map(command =>
+            command.name === 'changelog'
+                ? { ...command, run: (values: Record<string, unknown>) => void seen.push(values) }
+                : command
+        );
+        const program = createCli(commands);
+        await program.invokeAsync(['changelog', '--release-body', '3.0.0-beta.18', '--dry-run']);
+        expect(seen[0]).toMatchObject({
+            releaseBody: '3.0.0-beta.18',
+            dryRun: true,
+        });
+    });
+
+    it('only prints help after an argv error when helpOnError is enabled', async () => {
+        const error = vi.spyOn(logger, 'error').mockImplementation(() => {});
+        const write = vi.spyOn(logger, 'write').mockImplementation(() => {});
+        const previous = process.exitCode;
+        const argv = (...args: string[]) => ['node', 'dbx', '--no-update-check', ...args];
+        try {
+            expect(createCli().helpOnError).toBe(false);
+            expect(createCli({ helpOnError: true }).helpOnError).toBe(true);
+
+            await runCli(argv('not-a-real-command'));
+            expect(error).toHaveBeenCalledWith(expect.stringContaining('unknown command'));
+            expect(write).not.toHaveBeenCalledWith('err', expect.stringContaining('Usage:'));
+            expect(process.exitCode).toBe(1);
+
+            write.mockClear();
+            process.exitCode = undefined;
+            await runCli(argv('not-a-real-command'), { helpOnError: true });
+            expect(write).toHaveBeenCalledWith('err', expect.stringMatching(/Usage:/));
+        } finally {
+            process.exitCode = previous;
+            error.mockRestore();
+            write.mockRestore();
+        }
     });
 
     it('disables configured help colours when --no-color is passed', async () => {

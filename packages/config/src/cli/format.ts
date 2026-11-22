@@ -14,6 +14,8 @@ import type {
     ConfigHelpTemplate,
     ConfigProgramErrorMessageKey,
     ConfigProgramFormatOptions,
+    ConfigProgramGroupsOptions,
+    ConfigProgramSortOrder,
 } from '../types/format.js';
 
 type AnyCommand = CliCommand<any, any>;
@@ -187,6 +189,147 @@ function table(
     });
 }
 
+/** A help section: a heading plus the entries rendered under it. */
+interface HelpSection<T> {
+    heading: string;
+    items: T[];
+}
+
+/** Format a group label as a help heading (`diagnostics` + options -> `Diagnostics options:`). */
+function headingFor(label: string, kind: 'options' | 'commands'): string {
+    const base = label
+        .trim()
+        .replace(/:+$/, '')
+        .trim()
+        .replace(new RegExp(`\\s+${kind}$`, 'i'), '');
+    return `${base.charAt(0).toUpperCase()}${base.slice(1)} ${kind}:`;
+}
+
+/** The normalized group label of an option (`undefined` = default section). */
+function optionGroup(option: CliOption): string | undefined {
+    const label = option.group?.trim().replace(/:+$/, '').trim();
+    return label ? label : undefined;
+}
+
+/**
+ * Bucket options by `group`, keeping the default `Options:` section first and
+ * named groups in first-appearance order. Group labels are case-insensitive and
+ * rendered as `<Group> options:` headings. Grouping is disabled (flat) when the
+ * program's `groups` option is `false`.
+ */
+function optionSections(
+    options: readonly CliOption[],
+    defaultHeading: string,
+    setting: ConfigProgramGroupsOptions | undefined
+): HelpSection<CliOption>[] {
+    const settings = groupSettings(setting);
+    const defaults: CliOption[] = [];
+    const groups = new Map<string, HelpSection<CliOption>>();
+    for (const option of options) {
+        const label = settings.enabled ? optionGroup(option) : undefined;
+        if (!label) {
+            defaults.push(option);
+            continue;
+        }
+        const key = label.toLowerCase();
+        const existing = groups.get(key);
+        if (existing) {
+            existing.items.push(option);
+            continue;
+        }
+        groups.set(key, { heading: headingFor(label, 'options'), items: [option] });
+    }
+    const sections: HelpSection<CliOption>[] = [];
+    if (defaults.length > 0) sections.push({ heading: defaultHeading, items: defaults });
+    sections.push(...groups.values());
+    return sections;
+}
+
+interface GroupSettings {
+    enabled: boolean;
+    auto: boolean;
+    delimiters: string[];
+}
+
+/** Normalize the `groups` program option. */
+function groupSettings(setting: ConfigProgramGroupsOptions | undefined): GroupSettings {
+    if (setting === false) return { enabled: false, auto: false, delimiters: [] };
+    if (setting === true || setting === undefined) {
+        return { enabled: true, auto: true, delimiters: [':'] };
+    }
+    const delimiter = setting.delimiter;
+    const delimiters =
+        delimiter === undefined
+            ? [':']
+            : typeof delimiter === 'string'
+              ? [delimiter]
+              : (delimiter as readonly string[]).filter(Boolean);
+    return { enabled: true, auto: setting.auto !== false, delimiters };
+}
+
+/** The help group of a command, from its `group` or its delimited name path. */
+function commandGroup(command: AnyCommand, settings: GroupSettings): string | undefined {
+    if (!settings.enabled) return undefined;
+    const explicit = command.group?.trim().replace(/:+$/, '').trim();
+    if (explicit) return explicit;
+    if (!settings.auto) return undefined;
+    let index = -1;
+    for (const delimiter of settings.delimiters) {
+        if (!delimiter) continue;
+        const found = command.name.indexOf(delimiter);
+        if (found > 0 && (index === -1 || found < index)) index = found;
+    }
+    return index > 0 ? command.name.slice(0, index) : undefined;
+}
+
+/**
+ * Bucket commands by their explicit group or delimited name path
+ * (`vite:list` -> `Vite:`), keeping the default `Commands:` section first.
+ */
+function commandSections(
+    commands: readonly AnyCommand[],
+    setting: ConfigProgramGroupsOptions | undefined,
+    defaultHeading: string
+): HelpSection<AnyCommand>[] {
+    const settings = groupSettings(setting);
+    const defaults: AnyCommand[] = [];
+    const groups = new Map<string, HelpSection<AnyCommand>>();
+    for (const command of commands) {
+        const label = commandGroup(command, settings);
+        if (!label) {
+            defaults.push(command);
+            continue;
+        }
+        const key = label.toLowerCase();
+        const existing = groups.get(key);
+        if (existing) {
+            existing.items.push(command);
+            continue;
+        }
+        groups.set(key, { heading: headingFor(label, 'commands'), items: [command] });
+    }
+    const sections: HelpSection<AnyCommand>[] = [];
+    if (defaults.length > 0) sections.push({ heading: defaultHeading, items: defaults });
+    sections.push(...groups.values());
+    return sections;
+}
+
+/**
+ * Sort commands by name for one help section. `false` keeps the declaration
+ * order, which also preserves group first-appearance order.
+ */
+function sortCommands(
+    commands: readonly AnyCommand[],
+    order: ConfigProgramSortOrder | undefined
+): AnyCommand[] {
+    if (order === false) return [...commands];
+    const direction = order === 'desc' ? -1 : 1;
+    return [...commands].sort((a, b) => {
+        if (a.name === b.name) return 0;
+        return a.name < b.name ? -direction : direction;
+    });
+}
+
 /** Build the commander-like content shared by the help templates. */
 export function renderHelpContent(
     model: ConfigHelpModel,
@@ -209,11 +352,11 @@ export function renderHelpContent(
         lines.push('', descriptionColor(model.description));
     }
     const optionsWithHelp = withHelpOption(model.options, command);
-    if (optionsWithHelp.length > 0) {
-        lines.push('', usageColor('Options:'));
+    for (const section of optionSections(optionsWithHelp, 'Options:', model.groups)) {
+        lines.push('', usageColor(section.heading));
         lines.push(
             ...table(
-                optionsWithHelp.map(option => ({
+                section.items.map(option => ({
                     term: optionTerm(option),
                     description: option.description,
                     item: option,
@@ -225,19 +368,21 @@ export function renderHelpContent(
         );
     }
     if (model.commands.length > 0) {
-        lines.push('', usageColor('Commands:'));
-        lines.push(
-            ...table(
-                model.commands.map(child => ({
-                    term: child.name,
-                    description: child.description,
-                    item: child,
-                })),
-                options,
-                command,
-                'command'
-            )
-        );
+        for (const section of commandSections(model.commands, model.groups, 'Commands:')) {
+            lines.push('', usageColor(section.heading));
+            lines.push(
+                ...table(
+                    sortCommands(section.items, model.sort).map(child => ({
+                        term: child.name,
+                        description: child.description,
+                        item: child,
+                    })),
+                    options,
+                    command,
+                    'command'
+                )
+            );
+        }
     }
     return lines.join('\n');
 }
@@ -276,7 +421,9 @@ export function renderProgramHelp(
     description: string | undefined,
     commands: readonly AnyCommand[],
     options: ConfigProgramFormatOptions = {},
-    cliOptions: readonly CliOption[] = []
+    cliOptions: readonly CliOption[] = [],
+    groups?: ConfigProgramGroupsOptions,
+    sort?: ConfigProgramSortOrder
 ): string {
     return renderHelp(
         {
@@ -285,6 +432,8 @@ export function renderProgramHelp(
             usage: commands.length > 0 ? `${name} [options] [command]` : `${name} [options]`,
             options: cliOptions,
             commands,
+            ...(groups !== undefined ? { groups } : {}),
+            ...(sort !== undefined ? { sort } : {}),
         },
         options
     );
@@ -294,7 +443,9 @@ export function renderProgramHelp(
 export function renderCommandHelp(
     command: AnyCommand,
     path: readonly string[] = [],
-    options: ConfigProgramFormatOptions = {}
+    options: ConfigProgramFormatOptions = {},
+    groups?: ConfigProgramGroupsOptions,
+    sort?: ConfigProgramSortOrder
 ): string {
     const name = [...path, command.name].join(' ');
     return renderHelp(
@@ -304,6 +455,8 @@ export function renderCommandHelp(
             usage: usageFor(command, name),
             options: command.options ?? [],
             commands: command.commands ?? [],
+            ...(groups !== undefined ? { groups } : {}),
+            ...(sort !== undefined ? { sort } : {}),
             command,
         },
         options

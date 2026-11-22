@@ -2942,6 +2942,68 @@ Enable/disable this section (default: enabled when defined).
 
 Regenerate this section's managed files during `dbx sync`. When false, existing files are left untouched and are neither written nor drift-checked.
 
+## `mcp`
+
+MCP server and skill installation for AI harnesses.
+
+### `skills`
+
+- **Type**: `boolean | ToolchainMcpSkillsConfig`
+
+Install the official dbx skill into agent harnesses during `dbx sync`. Opt in by defining this section.
+
+#### `agents`
+
+- **Type**: `'claude' | 'codex' | 'vscode' | 'opencode' | 'pi' | 'custom' | Array<'claude' | 'codex' | 'vscode' | 'opencode' | 'pi' | 'custom'>`
+
+Agent harness(es) to install into (default: every builtin provider). `custom` requires `dir`.
+
+#### `scope`
+
+- **Type**: `'project' | 'global'`
+- **Default**: `"project"`
+
+Write the skill into the project (default) or the user profile.
+
+#### `dir`
+
+- **Type**: `string`
+
+Custom directory to write the skill into (with `agents: ['custom']`).
+
+#### `force`
+
+- **Type**: `boolean`
+- **Default**: `false`
+
+Overwrite an existing skill file (default: keep it).
+
+#### `enabled`
+
+- **Type**: `boolean`
+
+Enable/disable this section (default: enabled when defined).
+
+#### `regenerate`
+
+- **Type**: `boolean`
+- **Default**: `true`
+
+Regenerate this section's managed files during `dbx sync`. When false, existing files are left untouched and are neither written nor drift-checked.
+
+### `enabled`
+
+- **Type**: `boolean`
+
+Enable/disable this section (default: enabled when defined).
+
+### `regenerate`
+
+- **Type**: `boolean`
+- **Default**: `true`
+
+Regenerate this section's managed files during `dbx sync`. When false, existing files are left untouched and are neither written nor drift-checked.
+
 ## Full example
 
 ```ts [dbx.config.ts]

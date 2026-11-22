@@ -27,6 +27,11 @@ export interface CliOption {
     parse?: (value: string) => unknown;
     /** Allowed values; used for validation and misspelling suggestions. */
     choices?: readonly string[];
+    /**
+     * Optional help group. Options sharing a group render under a
+     * `<Group> options:` heading instead of the default `Options:` section.
+     */
+    group?: string;
     /** Keep the option registered but out of the generated docs. */
     hidden?: boolean;
 }
@@ -188,6 +193,11 @@ export interface CliCommand<
     scope?: TScope;
     /** Alternative command names registered alongside {@link name}. */
     aliases?: string[];
+    /**
+     * Optional help group. Overrides the group derived from a delimited command
+     * name (`vite:list` -> `vite`) when command grouping is enabled.
+     */
+    group?: string;
     /** Human-readable description. */
     description: string;
     /** Positional arguments the command accepts. */

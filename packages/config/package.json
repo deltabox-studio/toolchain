@@ -1,6 +1,6 @@
 {
     "name": "@deltabox/toolchain-config",
-    "version": "3.0.0-beta.5",
+    "version": "3.0.0-beta.6",
     "private": true,
     "description": "Zod- and env-backed configuration engine: parse environment variables, walk schemas, resolve typed config and generate .env, types, markdown, JSON and CLI output.",
     "author": "Victor Sango <victor@deltabox.studio>",

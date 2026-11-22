@@ -527,21 +527,24 @@ grouping command; it registers with its subcommands.
 
 A `ConfigProgram` exposes the runtime surface:
 
-| Member                                   | Description                                                            |
-| ---------------------------------------- | ---------------------------------------------------------------------- |
-| `commands`                               | The normalized commands (single command stays single).                 |
-| `globals`                                | The program-level global options.                                      |
-| `name()` / `description()` / `version()` | Set the metadata shown in help/version output.                         |
-| `output(writeOut, writeErr?)`            | Route help/version output; `writeErr` is reserved for error rendering. |
-| `globalOption()` / `globalOptions()`     | Append program-level globals.                                          |
-| `argv(values)`                           | Set the explicit argv used by `invoke()`.                              |
-| `withContext(context)`                   | Set the default host context.                                          |
-| `configure(format)`                      | Merge help/error formatting options.                                   |
-| `formatHelp(command?)`                   | Render program or command help.                                        |
-| `formatError(error)`                     | Render an error with the configured template.                          |
-| `invoke(argv?, context?)`                | Run synchronously (async handlers/resolvers throw).                    |
-| `invokeAsync(argv?, context?)`           | Run and await async handlers, hooks and resolvers.                     |
-| `hook()` / `hooks()`                     | Register inferred before/after hooks.                                  |
+| Member                                   | Description                                                             |
+| ---------------------------------------- | ----------------------------------------------------------------------- |
+| `commands`                               | The normalized commands (single command stays single).                  |
+| `globals`                                | The program-level global options.                                       |
+| `helpOnError`                            | Whether to print help after an invalid-argv error (`false` by default). |
+| `groups`                                 | Option/command grouping setting (`true` by default).                    |
+| `sort`                                   | Command ordering within each section (`'asc'` by default).              |
+| `name()` / `description()` / `version()` | Set the metadata shown in help/version output.                          |
+| `output(writeOut, writeErr?)`            | Route help/version output; `writeErr` is reserved for error rendering.  |
+| `globalOption()` / `globalOptions()`     | Append program-level globals.                                           |
+| `argv(values)`                           | Set the explicit argv used by `invoke()`.                               |
+| `withContext(context)`                   | Set the default host context.                                           |
+| `configure(format)`                      | Merge help/error formatting options.                                    |
+| `formatHelp(command?)`                   | Render program or command help.                                         |
+| `formatError(error)`                     | Render an error with the configured template.                           |
+| `invoke(argv?, context?)`                | Run synchronously (async handlers/resolvers throw).                     |
+| `invokeAsync(argv?, context?)`           | Run and await async handlers, hooks and resolvers.                      |
+| `hook()` / `hooks()`                     | Register inferred before/after hooks.                                   |
 
 Build the program through the engine — this is the preferred entry point because
 it infers the config/values types and accepts the full program options:
@@ -569,17 +572,57 @@ const program = engine.cli.program.create(
 ```
 
 `argv` defaults to `process.argv.slice(2)`, `name` defaults to `'program'`, and
-`disableColors` defaults to `false`. `program.configure()` merges formatting;
-`program.argv()`, `program.withContext()` and `program.output()` set the runtime
-pieces.
+`disableColors` defaults to `false`. Commands are sorted ascending by name in
+each help section by default; pass `sort: 'desc'` to reverse it or `sort: false`
+to keep declaration order (including inside groups). `program.configure()` merges
+formatting; `program.argv()`, `program.withContext()` and `program.output()` set
+the runtime pieces.
+
+`helpOnError` defaults to `false`, so invalid argv throws a
+`ConfigProgramError` without printing help. Pass `helpOnError: true` and append
+`program.formatHelp()` in your catch handler when you want the full help text:
+
+```ts
+program.invokeAsync().catch(error => {
+    console.error(error instanceof Error ? error.message : String(error));
+    if (error instanceof ConfigProgramError && program.helpOnError) {
+        console.error(program.formatHelp());
+    }
+    process.exitCode = 1;
+});
+```
+
+`groups` defaults to `true`, so help groups both option and command lists.
+Commands are grouped by their delimited name path (`vite:list` ->
+`Vite commands:`), while options use their explicit `group` labels. Set
+`groups: false` for flat lists, or `groups: { auto: false }` to only honor
+explicit `group` labels on commands. `delimiter` accepts one string or an array
+(default `':'`). Command entries within every section (including groups) are
+sorted by `sort` (`'asc'` by default; `'desc'` or `false` to change/disable).
+
+```ts
+const program = engine.cli.program.create(
+    cmd => [
+        cmd('sync', { name: 'sync', run: syncHandler }),
+        cmd('vite:list', { name: 'vite:list', run: listHandler }), // -> Vite commands:
+        cmd('serve:status', {
+            name: 'serve:status',
+            group: 'Server',
+            run: statusHandler,
+        }),
+    ],
+    { groups: { delimiter: [':', '/'] } }
+);
+```
 
 Use the lower-level `createConfigProgram(commands, options?)` only when you
 already have a command list that is not tied to an engine. It accepts the same
 options and is what `engine.cli.program.create()` calls internally.
 
 Program types: `ConfigProgram`, `ConfigProgramOptions`,
-`ConfigProgramFormatOptions`, `ConfigProgramCommand`, `ConfigScopeCommand`,
-`ConfigCommandBuilder`, `ConfigEngineCliProgram` and `ConfigProgramError`.
+`ConfigProgramFormatOptions`, `ConfigProgramGroupsOptions`,
+`ConfigProgramCommand`, `ConfigScopeCommand`, `ConfigCommandBuilder`,
+`ConfigEngineCliProgram` and `ConfigProgramError`.
 
 The standalone equivalent is
 `generateConfigProgram(schema, { envPrefix, ... })`: it returns `CliCommand[]`
@@ -593,7 +636,8 @@ Invalid argv throws a `ConfigProgramError` with `code` (for example
 `unknownCommand`, `unknownOption`, `missingOptionValue`, `invalidValue`,
 `missingCommand`), `input` and an optional misspelling `suggestion`. Use
 `format.error.messages` to override the messages and `program.formatError()` to
-render one.
+render one. Help is only printed when `helpOnError` is enabled (see
+[Program members and options](#program-members-and-options)).
 
 Options and subcommands have commander-style shorthands as well as array forms:
 
@@ -626,6 +670,35 @@ engine.cli.program.create(cmd => [
 same inputs spread as separate arguments. A subcommand definition may be an
 already-built `CliCommand`, a `[scope, setup]` / `[scope, description, setup]`
 tuple, or `{ scope, description?, setup? }`.
+
+#### Grouped options
+
+Give an option a `group` label to render it under its own heading. Ungrouped
+options stay in the default `Options:` section; groups appear in
+first-appearance order, merge case-insensitively and render as
+`<Group> options:`. Grouping applies to program globals and command options
+alike, and `groups: false` flattens option groups too.
+
+```ts
+cmd('sync')
+    .options([
+        { flags: '--check', description: 'Check only.' },
+        { flags: '--trace', description: 'Trace resolution.', group: 'Diagnostics' },
+        { flags: '--profile', description: 'Write a profile.', group: 'Diagnostics' },
+    ])
+    .run(syncHandler);
+```
+
+`formatHelp` prints:
+
+```text
+Options:
+  --check   Check only.
+
+Diagnostics options:
+  --trace   Trace resolution.
+  --profile Write a profile.
+```
 
 #### Global options
 

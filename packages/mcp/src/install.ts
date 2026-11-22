@@ -29,17 +29,25 @@ export interface McpProvider {
     format: McpConfigFormat;
     /** The config file for a scope (custom uses the caller's dir). */
     configPath: (scope: McpScope, cwd: string) => string;
-    /** The skill/instructions file for a scope. */
-    skillPath: (scope: McpScope, cwd: string) => string;
+    /** The skill/instructions file for a scope (`name` defaults to `deltabox`). */
+    skillPath: (scope: McpScope, cwd: string, name?: string) => string;
 }
 
 /** The MCP server name written into every config. */
 export const MCP_ENTRY_NAME = 'deltabox';
 
+/** The default skill directory/file stem. */
+export const MCP_SKILL_NAME = 'deltabox';
+
 const home = (): string => os.homedir();
 
 function projectOrGlobal(scope: McpScope, cwd: string, rel: string, global: string): string {
     return scope === 'project' ? path.join(cwd, rel) : path.join(home(), global);
+}
+
+/** The skill directory/file stem (`name` or {@link MCP_SKILL_NAME}). */
+function skillName(name?: string): string {
+    return name ?? MCP_SKILL_NAME;
 }
 
 /** The VS Code user profile directory (platform-aware). */
@@ -65,12 +73,12 @@ export const MCP_PROVIDERS: McpProvider[] = [
         description: 'Claude Code project `.mcp.json` or `~/.claude.json`, plus a skill.',
         format: 'claude',
         configPath: (scope, cwd) => projectOrGlobal(scope, cwd, '.mcp.json', '.claude.json'),
-        skillPath: (scope, cwd) =>
+        skillPath: (scope, cwd, name) =>
             projectOrGlobal(
                 scope,
                 cwd,
-                '.claude/skills/deltabox/SKILL.md',
-                '.claude/skills/deltabox/SKILL.md'
+                `.claude/skills/${skillName(name)}/SKILL.md`,
+                `.claude/skills/${skillName(name)}/SKILL.md`
             ),
     },
     {
@@ -80,12 +88,12 @@ export const MCP_PROVIDERS: McpProvider[] = [
         format: 'codex',
         configPath: (scope, cwd) =>
             projectOrGlobal(scope, cwd, '.codex/config.toml', '.codex/config.toml'),
-        skillPath: (scope, cwd) =>
+        skillPath: (scope, cwd, name) =>
             projectOrGlobal(
                 scope,
                 cwd,
-                '.codex/skills/deltabox/SKILL.md',
-                '.codex/skills/deltabox/SKILL.md'
+                `.codex/skills/${skillName(name)}/SKILL.md`,
+                `.codex/skills/${skillName(name)}/SKILL.md`
             ),
     },
     {
@@ -97,10 +105,10 @@ export const MCP_PROVIDERS: McpProvider[] = [
             scope === 'project'
                 ? path.join(cwd, '.vscode', 'mcp.json')
                 : path.join(vscodeUserDir(), 'mcp.json'),
-        skillPath: (scope, cwd) =>
+        skillPath: (scope, cwd, name) =>
             scope === 'project'
-                ? path.join(cwd, '.github', 'instructions', 'deltabox.instructions.md')
-                : path.join(vscodeUserDir(), 'prompts', 'deltabox.instructions.md'),
+                ? path.join(cwd, '.github', 'instructions', `${skillName(name)}.instructions.md`)
+                : path.join(vscodeUserDir(), 'prompts', `${skillName(name)}.instructions.md`),
     },
     {
         id: 'opencode',
@@ -109,12 +117,12 @@ export const MCP_PROVIDERS: McpProvider[] = [
         format: 'opencode',
         configPath: (scope, cwd) =>
             projectOrGlobal(scope, cwd, 'opencode.json', '.config/opencode/opencode.json'),
-        skillPath: (scope, cwd) =>
+        skillPath: (scope, cwd, name) =>
             projectOrGlobal(
                 scope,
                 cwd,
-                '.opencode/skills/deltabox/SKILL.md',
-                '.config/opencode/skills/deltabox/SKILL.md'
+                `.opencode/skills/${skillName(name)}/SKILL.md`,
+                `.config/opencode/skills/${skillName(name)}/SKILL.md`
             ),
     },
     {
@@ -123,12 +131,12 @@ export const MCP_PROVIDERS: McpProvider[] = [
         description: 'Pi `mcp.json` MCP server + skill.',
         format: 'generic',
         configPath: (scope, cwd) => projectOrGlobal(scope, cwd, '.pi/mcp.json', '.pi/mcp.json'),
-        skillPath: (scope, cwd) =>
+        skillPath: (scope, cwd, name) =>
             projectOrGlobal(
                 scope,
                 cwd,
-                '.pi/skills/deltabox/SKILL.md',
-                '.pi/skills/deltabox/SKILL.md'
+                `.pi/skills/${skillName(name)}/SKILL.md`,
+                `.pi/skills/${skillName(name)}/SKILL.md`
             ),
     },
 ];
@@ -137,10 +145,10 @@ export const MCP_PROVIDERS: McpProvider[] = [
 export const CUSTOM_PROVIDER: McpProvider = {
     id: 'custom',
     name: 'Custom directory',
-    description: 'Write a generic `mcp.json` + `deltabox/SKILL.md` into a directory you choose.',
+    description: 'Write a generic `mcp.json` + skill into a directory you choose.',
     format: 'generic',
     configPath: (_scope, cwd) => path.join(cwd, 'mcp.json'),
-    skillPath: (_scope, cwd) => path.join(cwd, 'deltabox', 'SKILL.md'),
+    skillPath: (_scope, cwd, name) => path.join(cwd, skillName(name), 'SKILL.md'),
 };
 
 /** Every provider, including the custom-directory option. */
@@ -298,7 +306,7 @@ function codexToml(current: string, command: string, args: string[]): string {
 export function renderSkill(provider: McpProviderId): string {
     return [
         '---',
-        'name: deltabox toolchain',
+        'name: deltabox-toolchain',
         'description: >',
         '  Manage this project with the deltabox MCP server (dbx_sync, dbx_projects,',
         '  dbx_changelog, dbx_migrate, dbx_tsconfig). Use when the user asks to sync',

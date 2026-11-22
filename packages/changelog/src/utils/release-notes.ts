@@ -136,44 +136,62 @@ function splitDetails(body: string): { text: string; details: DetailsBlock[] } {
 }
 
 /**
- * Keep only the first `### Package changes` section. Each version's entry has
- * its own footer comparing against the version before it; in a grouped release
- * the newest footer already covers the whole range, so older duplicates would
- * otherwise repeat the section (and show stale diffs).
+ * Keep only the first `### Package changes` section and drop the duplicates
+ * that follow it.
+ *
+ * Each version's entry has its own footer comparing against the version before
+ * it; in a grouped release the newest footer already covers the whole range, so
+ * older duplicates would otherwise repeat the section (and show stale diffs).
+ * The duplicate heading and its content are removed up to the next heading or
+ * the end of the enclosing details block.
  */
 function keepFirstPackageChanges(body: string): string {
     const lines = body.split('\n');
     const out: string[] = [];
     let seen = false;
-    for (let index = 0; index < lines.length; index += 1) {
+    let index = 0;
+    while (index < lines.length) {
         const line = lines[index]!;
         if (!/^###\s+Package changes\s*$/.test(line)) {
             out.push(line);
+            index += 1;
             continue;
         }
         if (!seen) {
             seen = true;
             out.push(line);
+            index += 1;
             continue;
         }
-        // Drop the duplicate heading + its content. Stop at the next heading or
-        // at the end of the enclosing details block (a footer may be wrapped).
         let depth = 0;
-        for (index += 1; index < lines.length; index += 1) {
+        index += 1;
+        for (; index < lines.length; index += 1) {
             const current = lines[index]!;
             const opens = (current.match(/<details\b/g) ?? []).length;
             const closes = (current.match(/<\/details>/g) ?? []).length;
             if (depth === 0 && (/^###\s+/.test(current) || (closes > 0 && opens === 0))) {
-                index -= 1;
                 break;
             }
             depth += opens - closes;
         }
+        // Resume at the boundary line (a heading or a closing `</details>`)
+        // instead of swallowing it with the duplicate section.
     }
     return out
         .join('\n')
         .replace(/\n{3,}/g, '\n\n')
         .trim();
+}
+
+/** Split a terminal `### Package changes` footer from a body's plain text. */
+function splitPackageChanges(text: string): { text: string; footer: string } {
+    const lines = text.split('\n');
+    const index = lines.findIndex(line => /^###\s+Package changes\s*$/.test(line));
+    if (index === -1) return { text: text.trim(), footer: '' };
+    return {
+        text: lines.slice(0, index).join('\n').trim(),
+        footer: lines.slice(index).join('\n').trim(),
+    };
 }
 
 /**
@@ -183,19 +201,23 @@ function keepFirstPackageChanges(body: string): string {
  * `beta.8`, `beta.9` and `beta.10` before the next stable release). Release
  * bodies should read as one version, so equal summary groups are merged and
  * duplicate preamble text is dropped. Repeated `Package changes` footers are
- * collapsed to the newest one (the cumulative diff).
+ * collapsed to the newest one (the cumulative diff) and kept last: the footer
+ * belongs after the grouped sections, never in the preamble.
  */
 function mergeBodies(bodies: string[]): string {
     const text: string[] = [];
     const seenText = new Set<string>();
+    const footers: string[] = [];
     const order: string[] = [];
     const groups = new Map<string, { summary: string; bodies: string[] }>();
     for (const body of bodies) {
         const parsed = splitDetails(body);
-        if (parsed.text && !seenText.has(parsed.text)) {
-            seenText.add(parsed.text);
-            text.push(parsed.text);
+        const sections = splitPackageChanges(parsed.text);
+        if (sections.text && !seenText.has(sections.text)) {
+            seenText.add(sections.text);
+            text.push(sections.text);
         }
+        if (sections.footer) footers.push(sections.footer);
         for (const block of parsed.details) {
             const existing = groups.get(block.key);
             if (existing) {
@@ -221,6 +243,7 @@ function mergeBodies(bodies: string[]): string {
             ].join('\n')
         );
     }
+    if (footers.length > 0) parts.push(footers.join('\n\n'));
     return keepFirstPackageChanges(parts.join('\n\n'));
 }
 

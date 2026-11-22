@@ -1,8 +1,62 @@
 # Changelog
 
-## 3.0.0-beta.3 (November 2026)
+## 3.0.0-beta.5 (November 2026)
 
 <!-- release:start -->
+
+<details>
+<summary>Bug fixes</summary>
+
+#### Mcp
+- Update skill name ([#004bbf9](https://github.com/deltabox-studio/toolchain/commit/004bbf9) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<!-- release:end -->
+
+
+## 3.0.0-beta.4 (November 2026)
+
+<details>
+<summary>New features</summary>
+
+#### Mcp
+- Teach the official skill to inspect the project ([#1982ac2](https://github.com/deltabox-studio/toolchain/commit/1982ac2) by [T0chi](https://github.com/T0chi))
+
+  <details>
+  <summary><strong>See more...</strong></summary>
+
+  - The installed skill now tells agents to check whether dbx is enabled via dbx.config.*, a vite.config.* dbx() plugin or .vscode/settings.json (deltabox.toolchain.enabled), read .dbx/toolchain/projects.json for the project graph/config locations and manifest.json for managed files, and inspect the enabled toolchain sections. It calls out commitlint/changelog conventions for commits and documents sync --check.
+
+  </details>
+
+- Add the official dbx skill installer ([#359e166](https://github.com/deltabox-studio/toolchain/commit/359e166) by [T0chi](https://github.com/T0chi))
+
+  <details>
+  <summary><strong>See more...</strong></summary>
+
+  - Introduce the official docs skill, which tells agents to read https://toolchain.deltabox.studio/llms.txt before answering or editing. The mcp package gains checkSkill/installSkill/installOfficialSkill (idempotent, forceable), a 'dbx skills --official' command with provider/scope/dir options, and a skills sync task driven by the new toolchain.mcp.skills section (opt-in by presence). The VS Code extension exposes an 'Install official skill' prompt action and Home quick action. Config types, schema, generated reference and docs are updated.
+
+  </details>
+
+</details>
+
+<details>
+<summary>Bug fixes</summary>
+
+#### Mcp
+- Honor force when syncing skills ([#c078b8a](https://github.com/deltabox-studio/toolchain/commit/c078b8a) by [T0chi](https://github.com/T0chi))
+
+  <details>
+  <summary><strong>See more...</strong></summary>
+
+  - The skills sync task skipped existing files before reading the configured force flag, so force:true never refreshed an edited skill. It now only skips existing files when force is off, never writes in check mode, and the tests cover force/check mode, custom agents, CLI defaults and validation.
+
+  </details>
+
+</details>
+
+## 3.0.0-beta.3 (November 2026)
 
 <details>
 <summary>New features</summary>
@@ -28,9 +82,6 @@
 - Export public types explicitly ([#b78d810](https://github.com/deltabox-studio/toolchain/commit/b78d810) by [T0chi](https://github.com/T0chi))
 
 </details>
-
-<!-- release:end -->
-
 
 ## 3.0.0-beta.2 (November 2026)
 

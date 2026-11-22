@@ -88,6 +88,13 @@ export function actionGroups(): PromptAction[] {
             'Install the dbx MCP server.'
         ),
         action(
+            'mcp.skills',
+            'Install official skill',
+            'MCP',
+            'deltabox.toolchain.installSkills',
+            'Install the official dbx docs skill for an AI agent.'
+        ),
+        action(
             'mcp.list',
             'List MCP installations',
             'MCP',

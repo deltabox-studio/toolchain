@@ -160,7 +160,7 @@ there is **opt-in by presence**: `section: true` enables it with defaults,
 `section: false` disables it, and `section: { ... }` configures it.
 See the [configuration reference](https://toolchain.deltabox.studio/config/reference).
 
-v3 adds a top-level [`toolchain.enabled`](https://toolchain.deltabox.studio/guide/migrations/v2-v3#toolchain-enable-disable)
+v3+ introduces a top-level [`toolchain.enabled`](https://toolchain.deltabox.studio/guide/migrations/v2-v3#toolchain-enable-disable)
 switch, a per-section `regenerate` flag, lifecycle
 [hooks](https://toolchain.deltabox.studio/guide/config/hooks) (`beforeVersion` /
 `afterVersion`) and [Dependabot security
@@ -231,7 +231,7 @@ Pass the engine's full `schema` instead of one scope to get the nested
 `{ server: { ... } }` shape. Env typings are generated the same way
 (`engine.env.types.write()`, which writes `env.ts` and the ambient
 `dbx-env.d.ts`). For file-backed configs, `loadConfig` / `loadConfigAsync`
-discover and import `dbx.config.*` (TS, JS, JSON or YAML) and resolve it through
+discover and import `myapp.config.*` (TS, JS, JSON or YAML) and resolve it through
 the same schema.
 
 See the [config generator

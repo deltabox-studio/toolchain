@@ -1,8 +1,245 @@
 # Changelog
 
-## 3.0.0-beta.18 (November 2026)
+## 3.0.0-beta.20 (November 2026)
 
 <!-- release:start -->
+
+<details>
+<summary>Bug fixes</summary>
+
+#### Changelog
+- Escape html-like tags so the docs build succeeds ([#b63280c](https://github.com/deltabox-studio/toolchain/commit/b63280c) by [T0chi](https://github.com/T0chi))
+
+  <details>
+  <summary><strong>See more...</strong></summary>
+
+  - VitePress compiles Markdown as Vue SFCs, so a raw '&lt;Group&gt;' placeholder from a commit body was parsed as an unclosed element and failed apps/docs. Escape tag-like sequences in generated commit subjects and bodies (and while reformatting bullets), while leaving inline code spans, autolinks and comparisons untouched. Also escape the existing beta.19 entry in both changelogs.
+
+  </details>
+
+#### Mcp
+- Update skill name ([#004bbf9](https://github.com/deltabox-studio/toolchain/commit/004bbf9) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<!-- release:end -->
+
+
+## 3.0.0-beta.19 (November 2026)
+
+<details>
+<summary>New features</summary>
+
+#### Config
+- Sort help commands and add a sort option ([#518d057](https://github.com/deltabox-studio/toolchain/commit/518d057) by [T0chi](https://github.com/T0chi))
+
+  <details>
+  <summary><strong>See more...</strong></summary>
+
+  - Commands now render in ascending name order within every help section, including command groups. A new sort option accepts 'asc' (default), 'desc' or false (declaration order), is exposed as program.sort and threads through createCli/runCli via RootCliOptions. Group headings keep their first-appearance order so the dogfood sidebar grouping is preserved. Docs and llms bundle updated.
+
+  </details>
+
+- Group commands by delimited name paths ([#8598303](https://github.com/deltabox-studio/toolchain/commit/8598303) by [T0chi](https://github.com/T0chi))
+
+  <details>
+  <summary><strong>See more...</strong></summary>
+
+  - Add a groups program option (default true) that renders help commands in grouped sections. With auto enabled (default) commands sharing a name path such as vite:list are grouped under a capitalised heading using the configured delimiter(s), defaulting to ':'. Explicit CliCommand/ConfigProgramCommand group labels override the derived group, groups:false renders a flat list, and groups:{auto:false} only honours explicit groups. dbx createCli/runCli expose the same option.
+
+  </details>
+
+- Group help options by heading ([#4815336](https://github.com/deltabox-studio/toolchain/commit/4815336) by [T0chi](https://github.com/T0chi))
+
+  <details>
+  <summary><strong>See more...</strong></summary>
+
+  - CliOption gains an optional group label. The default help renderer keeps ungrouped options under Options: and prints each group under its own capitalised heading (case-insensitive, first-appearance order). Grouping works for command options and program globals; the help/format docs and llms bundle are updated.
+
+  </details>
+
+#### Cli
+- Group the dogfood commands and options like the docs sidebar ([#4d986db](https://github.com/deltabox-studio/toolchain/commit/4d986db) by [T0chi](https://github.com/T0chi))
+
+  <details>
+  <summary><strong>See more...</strong></summary>
+
+  - Apply the new group feature to the built-in dbx CLI. Core workspace commands stay under Commands:, followed by Project & templates, Tooling, Automation & API, Agents and Vite+ headings in docs-sidebar order. Options gain per-command groups (sync, changelog, migrate, project/template scaffolding, tsconfig, MCP/skills, ...), with groups:false and auto:false still behaving as documented. The generated CLI reference and llms bundle are refreshed.
+
+  </details>
+
+- Make help-on-error opt-in ([#2a01d42](https://github.com/deltabox-studio/toolchain/commit/2a01d42) by [T0chi](https://github.com/T0chi))
+
+  <details>
+  <summary><strong>See more...</strong></summary>
+
+  - Invalid argv no longer appends the full program help automatically, so failures stay short and scriptable. Config programs gain a helpOnError option (exposed as the readonly program.helpOnError), and dbx's createCli/runCli accept { helpOnError: true } to restore the old behavior. Defaults to false and matches the config engine cli program option.
+
+  </details>
+
+#### Vscode
+- Expose the official skill installer in the palette ([#780e732](https://github.com/deltabox-studio/toolchain/commit/780e732) by [T0chi](https://github.com/T0chi))
+
+  <details>
+  <summary><strong>See more...</strong></summary>
+
+  - Contribute deltabox.toolchain.installSkills to the Command Palette alongside the MCP installer. The title uses plain ellipses to match the formatter rule.
+
+  </details>
+
+#### Mcp
+- Teach the official skill to inspect the project ([#1982ac2](https://github.com/deltabox-studio/toolchain/commit/1982ac2) by [T0chi](https://github.com/T0chi))
+
+  <details>
+  <summary><strong>See more...</strong></summary>
+
+  - The installed skill now tells agents to check whether dbx is enabled via dbx.config.*, a vite.config.* dbx() plugin or .vscode/settings.json (deltabox.toolchain.enabled), read .dbx/toolchain/projects.json for the project graph/config locations and manifest.json for managed files, and inspect the enabled toolchain sections. It calls out commitlint/changelog conventions for commits and documents sync --check.
+
+  </details>
+
+- Add the official dbx skill installer ([#359e166](https://github.com/deltabox-studio/toolchain/commit/359e166) by [T0chi](https://github.com/T0chi))
+
+  <details>
+  <summary><strong>See more...</strong></summary>
+
+  - Introduce the official docs skill, which tells agents to read https://toolchain.deltabox.studio/llms.txt before answering or editing. The mcp package gains checkSkill/installSkill/installOfficialSkill (idempotent, forceable), a 'dbx skills --official' command with provider/scope/dir options, and a skills sync task driven by the new toolchain.mcp.skills section (opt-in by presence). The VS Code extension exposes an 'Install official skill' prompt action and Home quick action. Config types, schema, generated reference and docs are updated.
+
+  </details>
+
+</details>
+
+<details>
+<summary>Bug fixes</summary>
+
+#### Mcp
+- Honor force when syncing skills ([#c078b8a](https://github.com/deltabox-studio/toolchain/commit/c078b8a) by [T0chi](https://github.com/T0chi))
+
+  <details>
+  <summary><strong>See more...</strong></summary>
+
+  - The skills sync task skipped existing files before reading the configured force flag, so force:true never refreshed an edited skill. It now only skips existing files when force is off, never writes in check mode, and the tests cover force/check mode, custom agents, CLI defaults and validation.
+
+  </details>
+
+#### Config
+- Suffix grouped help headings with options or commands ([#342825a](https://github.com/deltabox-studio/toolchain/commit/342825a) by [T0chi](https://github.com/T0chi))
+
+  <details>
+  <summary><strong>See more...</strong></summary>
+
+  - Named option groups now render as '&lt;Group&gt; options:' and command groups as '&lt;Group&gt; commands:', while the default sections stay 'Options:' and 'Commands:'. The program 'groups' option now also flattens option groups when false, so the same toggle controls every help group.
+
+  </details>
+
+- Accept hyphenated long options in the CLI program ([#d2f24df](https://github.com/deltabox-studio/toolchain/commit/d2f24df) by [T0chi](https://github.com/T0chi))
+
+  <details>
+  <summary><strong>See more...</strong></summary>
+
+  - node:util parseArgs matches option keys against the literal long name, but the program runtime keyed them by the camel-cased value name. Every hyphenated flag (dbx changelog --release-body, sync --dry-run, ...) was therefore rejected as unknown by the selected command. Key the parseArgs config by the literal flag and map the result back to the camel-cased values.
+
+  </details>
+
+#### Changelog
+- Keep grouped details when merging release footers ([#fef497e](https://github.com/deltabox-studio/toolchain/commit/fef497e) by [T0chi](https://github.com/T0chi))
+
+  <details>
+  <summary><strong>See more...</strong></summary>
+
+  - mergeBodies emitted the plain-text preamble before the details groups. When an older grouped entry carried a '### Package changes' footer, keepFirstPackageChanges stopped at the following details block and truncated the whole release body down to the footer. Split the footer out of the preamble and append it after the merged groups so it stays last.
+
+  </details>
+
+</details>
+
+<details>
+<summary>Refactors</summary>
+
+#### Config
+- Split the cli program runtime into modules ([#e9f39ce](https://github.com/deltabox-studio/toolchain/commit/e9f39ce) by [T0chi](https://github.com/T0chi))
+
+  <details>
+  <summary><strong>See more...</strong></summary>
+
+  - Move the commander-like runtime out of the single cli/program.ts file into cli/program/*, with index.ts as the public entry point. Routing, option definitions, parsing, colour resolution, invocation helpers and execution now live in focused modules; the exported createConfigProgram/suggest/renderBox surface is unchanged.
+
+  </details>
+
+</details>
+
+<details>
+<summary>Documentation</summary>
+
+- Cover grouped help, sorting and the official skill in v2-v3 ([#d01d5f9](https://github.com/deltabox-studio/toolchain/commit/d01d5f9) by [T0chi](https://github.com/T0chi))
+
+  <details>
+  <summary><strong>See more...</strong></summary>
+
+  - Document the groups/sort program options, opt-in helpOnError, the dbx skills command and API, toolchain.mcp.skills automatic installation, and the VS Code skill installer action in the migration guide.
+
+  </details>
+
+- Update documentation ([#ba637c3](https://github.com/deltabox-studio/toolchain/commit/ba637c3) by [T0chi](https://github.com/T0chi))
+
+#### Cli
+- Document the dogfood command groups ([#dcd6d1b](https://github.com/deltabox-studio/toolchain/commit/dcd6d1b) by [T0chi](https://github.com/T0chi))
+
+  <details>
+  <summary><strong>See more...</strong></summary>
+
+  - List the built-in help groups and their docs-sidebar order.
+
+  </details>
+
+#### Config
+- Clarify that groups covers options and commands ([#c80cc9c](https://github.com/deltabox-studio/toolchain/commit/c80cc9c) by [T0chi](https://github.com/T0chi))
+
+  <details>
+  <summary><strong>See more...</strong></summary>
+
+  - The groups program option flattens both option and command groups when false and auto only affects derived command groups. Update the option JSDoc, RootCliOptions docs and guides to say so explicitly.
+
+  </details>
+
+</details>
+
+<details>
+<summary>Styles</summary>
+
+- Replace remaining unicode ellipses ([#0bc4a05](https://github.com/deltabox-studio/toolchain/commit/0bc4a05) by [T0chi](https://github.com/T0chi))
+
+  <details>
+  <summary><strong>See more...</strong></summary>
+
+  - Normalize the docs committed after the last formatter pass so check stays clean.
+
+  </details>
+
+</details>
+
+<details>
+<summary>Tests</summary>
+
+#### Config
+- Cover grouping opt-outs and edge cases ([#0967adc](https://github.com/deltabox-studio/toolchain/commit/0967adc) by [T0chi](https://github.com/T0chi))
+
+  <details>
+  <summary><strong>See more...</strong></summary>
+
+  - Verify that groups:false disables explicit option/command groups from ConfigProgramOptions and createCli/RootCliOptions, that runCli flattens built-in groups, that auto:false keeps explicit labels, and that delimiter/heading edge cases and nested subcommand groups behave. Also add skill-guidance and skill installer edge-case assertions.
+
+  </details>
+
+</details>
+
+<details>
+<summary>Chores</summary>
+
+- Update `README.md` ([#6c6a035](https://github.com/deltabox-studio/toolchain/commit/6c6a035) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+## 3.0.0-beta.18 (November 2026)
 
 <details>
 <summary>New features</summary>
@@ -40,9 +277,6 @@
 - Add a release bodies guide under the changelog section ([#e00a44b](https://github.com/deltabox-studio/toolchain/commit/e00a44b) by [T0chi](https://github.com/T0chi))
 
 </details>
-
-<!-- release:end -->
-
 
 ## 3.0.0-beta.17 (November 2026)
 

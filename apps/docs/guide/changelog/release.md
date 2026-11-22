@@ -49,7 +49,7 @@ are not merged into the GitHub Release body.
 ## Grouped release bodies
 
 By default the body stops at the previous released version. When a project
-publishes prereleases (for example `3.0.0-beta.1` … `3.0.0-beta.16` before
+publishes prereleases (for example `3.0.0-beta.1` ... `3.0.0-beta.16` before
 `3.0.0`), the stable GitHub Release would only mention the changes since the last
 beta. Set `release.group` to treat every version since the previous **published**
 release as one version:

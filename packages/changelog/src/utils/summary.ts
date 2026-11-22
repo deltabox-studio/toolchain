@@ -15,7 +15,14 @@ import {
     wrapCustomDetails,
     type ResolvedDetails,
 } from './details.js';
-import { capitalize, formatBody, groupItems, parseCcSubject, renderGroups } from './format.js';
+import {
+    capitalize,
+    escapeMarkdownHtml,
+    formatBody,
+    groupItems,
+    parseCcSubject,
+    renderGroups,
+} from './format.js';
 import {
     prefetchGitHubMetadata,
     readPriorAuthors,
@@ -112,7 +119,7 @@ function commitItem(
         }
         const creditText = credit.length > 0 ? ` (${credit.join(' ')})` : '';
         const issueText = options.issues === false ? '' : renderIssues(issues);
-        text = `- ${capitalize(parsed.rest)}${creditText}${issueText}`;
+        text = `- ${escapeMarkdownHtml(capitalize(parsed.rest))}${creditText}${issueText}`;
     }
     return {
         parsed,

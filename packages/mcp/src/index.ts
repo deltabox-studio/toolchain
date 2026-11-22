@@ -8,6 +8,8 @@
 
 export * from './install.js';
 export * from './protocol.js';
+export * from './skills.js';
+export * from './sync.js';
 export * from './tools.js';
 export type {
     JsonValue,

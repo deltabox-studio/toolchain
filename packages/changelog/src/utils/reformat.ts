@@ -8,6 +8,7 @@ import { isBreakingCommit } from './breaking.js';
 import { applyDetailsToEntry, resolveDetails } from './details.js';
 import {
     capitalize,
+    escapeMarkdownHtml,
     formatBody,
     formatLine,
     groupItems,
@@ -219,7 +220,10 @@ function reformatEntry(
         // a fallback when the bullet has no subject of its own).
         const existing = parseCcSubject(withoutSuffix.replace(/\*\*/g, ''));
         const parsed = original ? parseCcSubject(original.subject) : existing;
-        const subject = formatLine(capitalize(existing.rest.trim() || parsed.rest), repo);
+        const subject = formatLine(
+            escapeMarkdownHtml(capitalize(existing.rest.trim() || parsed.rest)),
+            repo
+        );
         const text = `- ${[subject, suffix].filter(Boolean).join(' ')}`;
         // An existing description is never replaced: it may contain hand
         // corrections (eg. backticks the shell ate) that the git body cannot

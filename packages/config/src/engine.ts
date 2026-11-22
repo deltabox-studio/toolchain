@@ -8,7 +8,7 @@ import path from 'node:path';
 
 import type { CliCommand, CliCommandContext, CliOption } from '@deltabox/toolchain/shared';
 
-import { createConfigProgram } from './cli/program.js';
+import { createConfigProgram } from './cli/program/index.js';
 import { collectDefinitions, DEFAULT_ENV_PREFIX } from './collect.js';
 import { buildConfigJson } from './config-json.js';
 import { cliScopeSchemas } from './generators/cli-schema.js';
@@ -345,6 +345,7 @@ export function createConfigEngine<const TSchema extends ConfigSchema>(
         }
         let command: CliCommand<any, C> = spec.run ? chain.run(spec.run as never) : chain.run();
         if (spec.aliases) command = { ...command, aliases: [...spec.aliases] };
+        if (spec.group) command = { ...command, group: spec.group };
         if (spec.args) command = { ...command, args: [...spec.args] };
         if (spec.hidden) command = { ...command, hidden: true };
         if (spec.passthrough) command = { ...command, passthrough: true };
