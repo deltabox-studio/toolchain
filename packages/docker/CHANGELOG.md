@@ -1,8 +1,20 @@
 # Changelog
 
-## 3.0.0-beta.3 (November 2026)
+## 3.0.0-beta.4 (November 2026)
 
 <!-- release:start -->
+
+<details>
+<summary>Chores</summary>
+
+- Update domain `toolchain.deltabox.studio` to `toolchain.dbx.studio` ([#966f975](https://github.com/deltabox-studio/toolchain/commit/966f975) by [T0chi](https://github.com/T0chi))
+
+</details>
+
+<!-- release:end -->
+
+
+## 3.0.0-beta.3 (November 2026)
 
 <details>
 <summary>Chores</summary>
@@ -10,9 +22,6 @@
 - Cleanup references ([#a0027cd](https://github.com/deltabox-studio/toolchain/commit/a0027cd) by [T0chi](https://github.com/T0chi))
 
 </details>
-
-<!-- release:end -->
-
 
 ## 3.0.0-beta.2 (November 2026)
 
