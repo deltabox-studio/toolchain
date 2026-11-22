@@ -70,11 +70,11 @@ export type ConfigHelpTemplate =
     | ((model: ConfigHelpModel, options: ConfigProgramFormatOptions) => string);
 
 /**
- * Command help grouping.
+ * Help grouping for options and commands.
  *
- * `true` enables grouping and derives groups from delimited command names
- * (`vite:list` -> `vite`); `false` renders a flat command list. An object can
- * disable the automatic derivation or change the delimiter(s).
+ * `true` enables grouping and derives command groups from delimited command
+ * names (`vite:list` -> `vite`); `false` renders flat lists. An object can
+ * disable the automatic command derivation or change the delimiter(s).
  */
 export type ConfigProgramGroupsOptions =
     | boolean

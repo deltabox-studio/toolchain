@@ -6561,10 +6561,12 @@ program.invokeAsync().catch(error => {
 });
 ```
 
-`groups` defaults to `true`, so help groups commands by their delimited name
-path (`vite:list` -> `Vite commands:`). Set `groups: false` for a flat list, or
-`groups: { auto: false }` to only honor explicit `group` labels. `delimiter`
-accepts one string or an array (default `':'`).
+`groups` defaults to `true`, so help groups both option and command lists.
+Commands are grouped by their delimited name path (`vite:list` ->
+`Vite commands:`), while options use their explicit `group` labels. Set
+`groups: false` for flat lists, or `groups: { auto: false }` to only honor
+explicit `group` labels on commands. `delimiter` accepts one string or an array
+(default `':'`).
 
 ```ts
 const program = engine.cli.program.create(
@@ -11935,8 +11937,8 @@ Invalid argv prints only the error message by default. Pass
 `runCli(argv, { helpOnError: true })` to also print the full help after an
 unknown option/command or a bad value.
 
-`dbx` groups its command list by default: `vite:list` is listed under a
-`Vite commands:` heading. Pass `{ groups: false }` for a flat list, or
+`dbx` groups options and commands by default: `vite:list` is listed under a
+`Vite commands:` heading. Pass `{ groups: false }` for flat lists, or
 `{ groups: { auto: false } }` to only honor explicit command groups. The same
 options work through `createCli` and `runCli`.
 

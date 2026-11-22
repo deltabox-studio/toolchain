@@ -205,8 +205,8 @@ Invalid argv prints only the error message by default. Pass
 `runCli(argv, { helpOnError: true })` to also print the full help after an
 unknown option/command or a bad value.
 
-`dbx` groups its command list by default: `vite:list` is listed under a
-`Vite commands:` heading. Pass `{ groups: false }` for a flat list, or
+`dbx` groups options and commands by default: `vite:list` is listed under a
+`Vite commands:` heading. Pass `{ groups: false }` for flat lists, or
 `{ groups: { auto: false } }` to only honor explicit command groups. The same
 options work through `createCli` and `runCli`.
 

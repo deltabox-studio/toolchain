@@ -256,9 +256,10 @@ export interface RootCliOptions {
      */
     helpOnError?: boolean;
     /**
-     * Group commands in help by their delimited name path (`vite:list` ->
-     * `Vite:`). `true` (default) enables auto grouping; `false` renders a flat
-     * list; an object can disable `auto` or change the delimiter(s).
+     * Group options and commands in help by their delimited name path
+     * (`vite:list` -> `Vite commands:`). `true` (default) enables auto grouping;
+     * `false` renders flat lists; an object can disable `auto` or change the
+     * delimiter(s).
      * @default `true`
      */
     groups?: ConfigProgramGroupsOptions;

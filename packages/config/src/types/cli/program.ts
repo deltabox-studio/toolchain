@@ -769,10 +769,10 @@ export type ConfigProgramOptions<
      */
     helpOnError?: boolean;
     /**
-     * Group the command list in help output. `true` (the default) derives
-     * groups from delimited command names (`vite:list` -> `vite`); `false`
-     * renders a flat list. An object can disable `auto` grouping or change the
-     * delimiter(s).
+     * Group options and commands in help output. `true` (the default) derives
+     * command groups from delimited names (`vite:list` -> `vite`); `false`
+     * renders flat lists. An object can disable `auto` command grouping or
+     * change the delimiter(s).
      * @default `true`
      */
     groups?: ConfigProgramGroupsOptions;
@@ -802,7 +802,7 @@ export interface ConfigProgram<
      * error ({@link ConfigProgramOptions.helpOnError}).
      */
     readonly helpOnError: boolean;
-    /** The command-grouping setting in effect ({@link ConfigProgramOptions.groups}). */
+    /** The option/command grouping setting ({@link ConfigProgramOptions.groups}). */
     readonly groups: ConfigProgramGroupsOptions;
     /** Set the program name shown in help. */
     name(value: string): this;

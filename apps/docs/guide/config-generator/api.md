@@ -589,10 +589,12 @@ program.invokeAsync().catch(error => {
 });
 ```
 
-`groups` defaults to `true`, so help groups commands by their delimited name
-path (`vite:list` -> `Vite commands:`). Set `groups: false` for a flat list, or
-`groups: { auto: false }` to only honor explicit `group` labels. `delimiter`
-accepts one string or an array (default `':'`).
+`groups` defaults to `true`, so help groups both option and command lists.
+Commands are grouped by their delimited name path (`vite:list` ->
+`Vite commands:`), while options use their explicit `group` labels. Set
+`groups: false` for flat lists, or `groups: { auto: false }` to only honor
+explicit `group` labels on commands. `delimiter` accepts one string or an array
+(default `':'`).
 
 ```ts
 const program = engine.cli.program.create(
