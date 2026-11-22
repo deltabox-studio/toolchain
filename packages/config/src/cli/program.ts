@@ -152,19 +152,34 @@ function optionDefinitions(command: CliCommand): OptionDef[] {
     return (command.options ?? []).flatMap(parseOptionFlags);
 }
 
-function parseArgsOptions(defs: readonly OptionDef[]): ParseArgsOptionsConfig {
+/**
+ * Build the `node:util` `parseArgs` options for a command.
+ *
+ * `parseArgs` matches an option key against the literal long name (`--dry-run`
+ * is keyed by `dry-run`), whereas the runtime exposes parsed values under the
+ * camel-cased {@link OptionDef.key} (`dryRun`). Keying the config by the
+ * camel-cased name silently rejected every hyphenated flag, so the literal name
+ * is used here and {@link parsedKeys} maps the result back.
+ */
+function parseArgsOptions(defs: readonly OptionDef[]): {
+    options: ParseArgsOptionsConfig;
+    parsedKeys: Map<string, string>;
+} {
     const options: ParseArgsOptionsConfig = {};
+    const parsedKeys = new Map<string, string>();
     for (const def of defs) {
         if (def.negated) continue;
-        const existing = options[def.key];
-        options[def.key] = {
+        const name = def.long ? def.long.replace(/^--/, '') : def.key;
+        const existing = options[name];
+        options[name] = {
             type: def.takesValue ? 'string' : 'boolean',
             ...(existing && 'short' in existing ? { short: existing.short } : {}),
             ...(def.short ? { short: def.short.replace(/^-/, '') } : {}),
             ...(def.multiple ? { multiple: true } : {}),
         };
+        parsedKeys.set(name, def.key);
     }
-    return options;
+    return { options, parsedKeys };
 }
 
 const OPTIONAL_VALUE = '__DBX_OPTIONAL__';
@@ -412,11 +427,12 @@ function parseCommandArgs(
     }
 
     const lenient = command.passthrough === true || command.bin !== undefined;
+    const { options: parseOptions, parsedKeys } = parseArgsOptions(defs);
     let parsed: { values: Record<string, unknown>; positionals: string[] };
     try {
         parsed = parseArgs({
             args: processed,
-            options: parseArgsOptions(defs),
+            options: parseOptions,
             allowPositionals: true,
             strict: !lenient,
         }) as { values: Record<string, unknown>; positionals: string[] };
@@ -448,8 +464,9 @@ function parseCommandArgs(
     }
 
     const values: Record<string, unknown> = {};
-    for (const [key, value] of Object.entries(parsed.values)) {
+    for (const [parsedKey, value] of Object.entries(parsed.values)) {
         if (value === undefined) continue;
+        const key = parsedKeys.get(parsedKey) ?? parsedKey;
         const def = findLastDefinition(defs, key);
         const coerced = coerceValue(def, value);
         const declaredType = def?.option.type;

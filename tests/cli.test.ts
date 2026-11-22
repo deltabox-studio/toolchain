@@ -120,6 +120,23 @@ describe('dbx CLI', () => {
         expect(seen).toEqual(['1.5.0']);
     });
 
+    it('routes hyphenated changelog options to the selected command', async () => {
+        // Regression for the Release workflow: `dbx changelog --release-body
+        // <semver>` was rejected by the root program as an unknown option.
+        const seen: Record<string, unknown>[] = [];
+        const commands = builtinCommands().map(command =>
+            command.name === 'changelog'
+                ? { ...command, run: (values: Record<string, unknown>) => void seen.push(values) }
+                : command
+        );
+        const program = createCli(commands);
+        await program.invokeAsync(['changelog', '--release-body', '3.0.0-beta.18', '--dry-run']);
+        expect(seen[0]).toMatchObject({
+            releaseBody: '3.0.0-beta.18',
+            dryRun: true,
+        });
+    });
+
     it('disables configured help colours when --no-color is passed', async () => {
         const output: string[] = [];
         const program = createCli();

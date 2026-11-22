@@ -536,6 +536,52 @@ describe('program invocation', () => {
         expect(seen[1]).toMatchObject({ color: false });
     });
 
+    it('parses hyphenated long options into camel-cased values', async () => {
+        // Regression: `parseArgs` options were keyed by the camel-cased name
+        // (`dryRun`), so `--dry-run` / `--release-body` were rejected as
+        // unknown options by the selected command.
+        const seen: Record<string, unknown>[] = [];
+        const program = createConfigProgram([
+            {
+                name: 'changelog',
+                description: 'Changelog.',
+                options: [
+                    { flags: '--dry-run', description: 'Dry run.' },
+                    { flags: '--release-body <semver>', description: 'Release body.' },
+                    {
+                        flags: '--release-include-prereleases',
+                        description: 'Include prereleases.',
+                    },
+                    { flags: '--no-release-group', description: 'No release group.' },
+                    { flags: '--intro-file <file>', description: 'Intro file.' },
+                    { flags: '--tag <value...>', description: 'Tags.' },
+                ],
+                run: (values: Record<string, unknown>) => void seen.push(values),
+            },
+        ]);
+        await program.invokeAsync([
+            'changelog',
+            '--dry-run',
+            '--release-body',
+            '3.0.0-beta.18',
+            '--release-include-prereleases',
+            '--intro-file',
+            'intro.md',
+            '--tag',
+            'a',
+            'b',
+        ]);
+        expect(seen[0]).toEqual({
+            dryRun: true,
+            releaseBody: '3.0.0-beta.18',
+            releaseIncludePrereleases: true,
+            introFile: 'intro.md',
+            tag: ['a', 'b'],
+        });
+        await program.invokeAsync(['changelog', '--no-release-group']);
+        expect(seen[1]).toMatchObject({ releaseGroup: false });
+    });
+
     it('rejects invalid number/boolean option values', () => {
         const program = createConfigProgram([
             {
