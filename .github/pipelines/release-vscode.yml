@@ -109,6 +109,19 @@ stages:
         targetFolder: $(extensionWorkspaceDir)
       displayName: 'Copy changelog from root'
 
+    - task: PowerShell@2
+      name: 'PrereleaseStep'
+      displayName: 'Detect a pre-release extension version'
+      inputs:
+        pwsh: true
+        targetType: 'inline'
+        script: |
+          $ErrorActionPreference = 'Stop'
+          $pkg = Get-Content '$(extensionWorkspaceDir)/package.json' -Raw | ConvertFrom-Json
+          $isPrerelease = $pkg.version -match '-'
+          Write-Host "extension version=$($pkg.version) prerelease=$isPrerelease"
+          Write-Host "##vso[task.setvariable variable=prerelease;isOutput=true]$($isPrerelease.ToString().ToLowerInvariant())"
+
     - script: |
         node -e 'const fs=require("fs");const p="$(extensionWorkspaceDir)/package.json";const j=JSON.parse(fs.readFileSync(p,"utf8"));const v=j.version;if(v.includes("-")){j.version=v.split("-")[0];fs.writeFileSync(p,JSON.stringify(j,null,4)+"\n");console.log("Normalized pre-release "+v+" to "+j.version);}'
       displayName: 'Normalize a pre-release extension version'
@@ -116,6 +129,13 @@ stages:
     - script: |
         $(packageManager) build
       displayName: 'Build workspaces and the VSIX extension'
+
+    # The regular build packages a stable VSIX. Marketplace pre-releases are
+    # flagged at package time, so repackage with --pre-release before publishing.
+    - script: |
+        $(packageManager) workspace toolchain-vscode package:vsix:prerelease
+      displayName: 'Repackage the VSIX as a pre-release'
+      condition: eq(variables['PrereleaseStep.prerelease'], 'true')
 
     - task: CopyFiles@2
       inputs:
